@@ -24,6 +24,10 @@ targets:
     platform: iOS
     sources:
       - path: Sources
+        excludes:
+          # Info.plist 由 INFOPLIST_FILE 处理；若同时进资源阶段，
+          # Xcode 会因产物重名（Multiple commands produce Info.plist）而编译失败
+          - Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.fundus.winterfall
