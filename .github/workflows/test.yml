@@ -1,0 +1,20 @@
+name: test
+
+# 每次推送到 main 或提 PR 时跑全量测试：
+# 引擎 27 项 + 内容完整性 10 项 + 全界面内容审查 5 项 + UI 冒烟 17 项
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 运行测试
+        run: npm test

@@ -1,0 +1,11 @@
+{
+  "name": "winterfall",
+  "version": "3.0.0-m1",
+  "private": true,
+  "type": "module",
+  "description": "《凛冬降临》纯文字点击式末世生存游戏 —— 数据驱动 SPA（M1 里程碑：第 1—3 天完整可玩）",
+  "scripts": {
+    "start": "node ./tools/serve.mjs",
+    "test": "node --test \"tests/*.test.mjs\""
+  }
+}

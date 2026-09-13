@@ -1,0 +1,15 @@
+{
+  "name": "凛冬降临",
+  "short_name": "凛冬降临",
+  "description": "纯文字点击式末世生存游戏",
+  "lang": "zh-CN",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#060911",
+  "theme_color": "#060911",
+  "icons": [
+    { "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

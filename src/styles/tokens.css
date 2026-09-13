@@ -1,0 +1,49 @@
+/* 设计令牌 —— 项目书 19.6 视觉语言：冷白 / 深蓝 / 低饱和蓝，光脑青蓝，危险柔和橙红，成功低饱和绿 */
+:root {
+  --c-bg: #060911;
+  --c-bg-2: #0a1120;
+  --c-bg-3: #101a2d;
+  --c-glass: rgba(20, 31, 51, 0.72);
+  --c-glass-2: rgba(28, 42, 66, 0.6);
+  --c-line: rgba(122, 162, 220, 0.16);
+  --c-line-2: rgba(122, 162, 220, 0.3);
+  --c-text: #e9eefb;
+  --c-text-2: #b9c7dd;
+  --c-dim: #7f93b0;
+  --c-primary: #3d7dff;
+  --c-primary-soft: rgba(61, 125, 255, 0.16);
+  --c-mind: #5fe3ff;
+  --c-mind-soft: rgba(95, 227, 255, 0.14);
+  --c-good: #4ec98a;
+  --c-good-soft: rgba(78, 201, 138, 0.16);
+  --c-warn: #f2a33c;
+  --c-warn-soft: rgba(242, 163, 60, 0.16);
+  --c-bad: #ef6a5a;
+  --c-bad-soft: rgba(239, 106, 90, 0.16);
+  --c-frost: #a9d4ff;
+
+  --r-card: 16px;
+  --r-card-lg: 20px;
+  --r-sheet: 26px;
+  --r-btn: 12px;
+  --r-chip: 999px;
+
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+
+  --t-fast: 160ms;
+  --t: 240ms;
+  --t-slow: 300ms;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  --shadow-1: 0 2px 10px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 10px 32px rgba(0, 0, 0, 0.5);
+
+  --fs-xs: 12px; --fs-sm: 13px; --fs-md: 14px; --fs-lg: 16px;
+  --fs-xl: 20px; --fs-2xl: 26px; --fs-3xl: 34px;
+
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-t: env(safe-area-inset-top, 0px);
+  --touch: 44px;
+  --nav-h: 60px;
+  --top-h: 56px;
+}

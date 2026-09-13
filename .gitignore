@@ -1,0 +1,20 @@
+# 依赖与构建产物（本项目零依赖、无构建，这里只是防御性忽略）
+node_modules/
+dist/
+build/
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 临时脚本与日志（注意：不要用 _*.mjs 这类宽泛规则，会误伤 tests/_dom.mjs）
+tools/_*.mjs
+*.log
+*.tmp
+
+# 本地环境
+.env
+.env.local

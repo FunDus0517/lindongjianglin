@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#060911">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="凛冬降临 · 纯文字点击式末世生存游戏">
+<!-- 手机浏览器：可“添加到主屏幕”后全屏独立运行 -->
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./icon.svg" type="image/svg+xml">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="凛冬降临">
+<link rel="apple-touch-icon" href="./icon.svg">
+<title>凛冬降临</title>
+<link rel="stylesheet" href="./src/styles/tokens.css">
+<link rel="stylesheet" href="./src/styles/app.css">
+<script>
+  // 界面偏好要在首屏绘制前落到 <html> 上，避免“先播动画再关动画”的闪烁。
+  try {
+    var p = JSON.parse(localStorage.getItem('winterfall.prefs.v1') || '{}');
+    document.documentElement.dataset.sound = p.sound === false ? 'off' : 'on';
+    document.documentElement.dataset.motion = p.motion === false ? 'reduced' : 'full';
+  } catch (e) { /* 隐私模式下按默认值走 */ }
+</script>
+</head>
+<body>
+<div id="app" class="app" aria-live="polite"></div>
+<div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+<div id="layer" class="layer" aria-live="assertive"></div>
+<script type="module" src="./src/main.js"></script>
+<noscript>《凛冬降临》需要 JavaScript 才能运行。</noscript>
+</body>
+</html>

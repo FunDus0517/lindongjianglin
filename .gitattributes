@@ -1,0 +1,9 @@
+# 统一换行：仓库内一律 LF，Windows 检出时可以保持原样，
+# 避免 CI（Linux）与本机（Windows）之间出现整文件级的换行差异。
+* text=auto eol=lf
+
+# 二进制文件不做换行处理
+*.png binary
+*.jpg binary
+*.ico binary
+*.zip binary

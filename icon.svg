@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="凛冬降临">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#122036"/>
+      <stop offset="1" stop-color="#060911"/>
+    </linearGradient>
+    <linearGradient id="ice" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#a9d4ff"/>
+      <stop offset="1" stop-color="#5fe3ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#bg)"/>
+  <g stroke="url(#ice)" stroke-width="14" stroke-linecap="round" fill="none">
+    <path d="M256 96v320M104 176l304 160M408 176L104 336"/>
+    <path d="M256 150l-38-38M256 150l38-38M256 362l-38 38M256 362l38 38"/>
+    <path d="M128 216l-30 12M128 216l6-32M384 296l30-12M384 296l-6 32"/>
+    <path d="M384 216l30 12M384 216l-6-32M128 296l-30-12M128 296l6 32"/>
+  </g>
+  <text x="256" y="300" text-anchor="middle" font-family="system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif" font-size="86" font-weight="600" fill="#e9eefb">凛冬</text>
+</svg>
