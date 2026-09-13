@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 事件与选择（项目书 §8）。事件 = 叙事文本 + 状态信息 + 选项按钮。
  * 每个选项的 resolve 必须真实改变数据：时间、资源、状态、关系、Flag 或结局条件。
  *
@@ -14,6 +14,7 @@
  */
 import { count, countCategory, has } from '../systems/Inventory.js';
 import { item } from './items.js';
+import { EXTRA_EVENTS } from './events-extra.js';
 
 /** enabled 辅助：材料不足时给出明确原因（项目书 23：资源不足必须清晰提示）。 */
 const afford = (state, need) => {
@@ -1654,6 +1655,9 @@ export const EVENTS = {
     ],
   },
 };
+
+/** 第二轮补充剧情：同构事件，合并进同一张表（脚本按天排队，随机事件进随机池）。 */
+Object.assign(EVENTS, EXTRA_EVENTS);
 
 export const EVENT_LIST = Object.values(EVENTS);
 export const event = (id) => EVENTS[id];
