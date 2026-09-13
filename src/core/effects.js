@@ -6,12 +6,16 @@
 import { toast, pulse } from './store.js';
 import { clamp, signed } from './util.js';
 import { item } from '../data/items.js';
+import * as Achievement from '../systems/Achievement.js';
 import * as Battle from '../systems/Battle.js';
+import * as Daily from '../systems/Daily.js';
+import * as Death from '../systems/Death.js';
 import * as Ending from '../systems/Ending.js';
 import * as Event from '../systems/Event.js';
 import * as Faction from '../systems/Faction.js';
 import * as Fame from '../systems/Fame.js';
 import * as GameTime from '../systems/GameTime.js';
+import * as Growth from '../systems/Growth.js';
 import * as Inventory from '../systems/Inventory.js';
 import * as Mind from '../systems/Mind.js';
 import * as NPC from '../systems/NPC.js';
@@ -39,6 +43,8 @@ export function applyOutcome(state, outcome, opts = {}) {
       Inventory.applyItems(state, losses);
       toast('仓库容量不足，新增物资没能带回', 'warn');
     } else {
+      // 记下这批入账：倒地时会丢失"最近一次搜集"的东西（Death.recordGain）
+      Death.recordGain(state, outcome.items, outcome.logKind ?? '');
       for (const [id, v] of Object.entries(outcome.items)) if (v !== 0) pulse(`${item(id).name} ${signed(v)}`, v > 0 ? 'good' : 'bad');
     }
   }
@@ -105,8 +111,11 @@ export function applyOutcome(state, outcome, opts = {}) {
   /* 6. 后续：战斗 → 事件 → 排队的脚本事件 → 随机事件 */
   if (outcome.ending && !state.ending) Ending.apply(state, outcome.ending);
   if (!state.ending) {
-    if (outcome.battle) Battle.start(state, outcome.battle);
-    else if (outcome.event) Event.activate(state, outcome.event, 'outcome');
+    if (outcome.battle) {
+      // outcome.battle 可以是敌人 id，也可以是 { enemy, stake }（NPC 对战带赌注）
+      const b = typeof outcome.battle === 'string' ? { enemy: outcome.battle } : outcome.battle;
+      Battle.start(state, b.enemy, { stake: b.stake ?? null, source: b.source ?? null });
+    } else if (outcome.event) Event.activate(state, outcome.event, 'outcome');
     else if (state.battle && !state.battle.over) { /* 战斗中不推进剧情 */ }
     else if (state.active) { /* 已有待处理事件，保留它，等玩家决策 */ }
     else {
@@ -121,6 +130,12 @@ export function applyOutcome(state, outcome, opts = {}) {
   /* 7. 任务与战力 */
   const finished = Quest.sync(state);
   Power.refresh(state);
+
+  /* 7.5 商业化系统：角色成长 → 每日任务 → 成就（顺序固定，后一个能看到前一个的结果） */
+  Growth.addXp(state, Math.max(1, Math.round((outcome.minutes ?? 0) / 10)) + (opts.resolvedEventId ? 12 : 0));
+  Daily.ensure(state);
+  Daily.observe(state, outcome, opts);
+  Achievement.sync(state);
 
   /* 8. 日志与提示 */
   const text = notes.length > 0 ? notes.join(' ') : outcome.log;

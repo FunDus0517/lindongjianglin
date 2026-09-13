@@ -1,8 +1,11 @@
-﻿/**
- * 章节表（项目书 §4 30天剧情结构 + §11 情报页世界信息）。
+/**
+ * 章节表（项目书 §4 30天剧情结构 + §11 情报页世界信息 + 商业化升级 §六「不设置固定结局」）。
  * 每天给出：主导天气、基准气温、当日刷新任务、章节主旨。
  * weather 引用 systems/Weather.js 的天气 id；quests 引用 data/quests.js 的 id。
- * 第 4—30 天的脚本事件将在 M2—M4 里程碑补齐，天气与气温曲线从第 1 天起即生效。
+ *
+ * 第 30 天之后不再是结局：剧本内容到第 30 天为止，此后进入**无尽模式**——
+ * 天气与难度沿用第 30 天，但气温随天数缓慢回暖（黎明之后冬天开始退），
+ * 主线任务不再新增，随机事件、地点、人物、经营循环继续跑。
  * @module data/chapters
  */
 export const CHAPTERS = [
@@ -38,5 +41,25 @@ export const CHAPTERS = [
   { day: 30, title: '黎明', weather: 'polar_night', temp: -40, quests: ['q_dawn', 'q_survive_30'], synopsis: '黎明到来，根据资源、战力、关系、势力和关键选择计算结局。' },
 ];
 
-export const chapterOf = (day) => CHAPTERS[Math.min(Math.max(day, 1), CHAPTERS.length) - 1];
+/** 无尽模式：每过一天回暖 0.3℃，封顶 −16℃；天气与任务沿用第 30 天。 */
+export const ENDLESS_WARM_PER_DAY = 0.3;
+export const ENDLESS_TEMP_CAP = -16;
+
+export function chapterOf(day) {
+  const d = Math.max(1, Math.floor(day));
+  if (d <= CHAPTERS.length) return CHAPTERS[d - 1];
+  const last = CHAPTERS[CHAPTERS.length - 1];
+  const extra = d - CHAPTERS.length;
+  return {
+    ...last,
+    day: d,
+    title: `漫长冬天 · 第 ${extra} 天`,
+    temp: Math.min(ENDLESS_TEMP_CAP, last.temp + extra * ENDLESS_WARM_PER_DAY),
+    quests: [],
+    synopsis: '黎明之后冬天开始退，但没有人敢说它不会回来。',
+    endless: true,
+  };
+}
+
+/** 剧本内容天数（第 30 天）。之后进入无尽模式，不再是结局。 */
 export const TOTAL_DAYS = CHAPTERS.length;

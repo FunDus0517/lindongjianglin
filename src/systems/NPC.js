@@ -1,13 +1,21 @@
 /**
- * 人物关系（项目书 §14）。人物不是剧情文本，会根据玩家行为主动产生事件。
- * 四个维度：好感度 favor、信任度 trust、忠诚度 loyalty、压力值 stress。
+ * 人物关系（项目书 §14 + 商业化升级 §四.3）。
+ * 五个维度：好感度 favor、信任度 trust、忠诚度 loyalty、压力值 stress、冲突值 conflict。
+ * 冲突值是商业化文档点名的第三个轴：它会自己长（长期高压 + 低好感），
+ * 到一定程度人物会拒绝对话，再严重就会退出互助体系。
  * @module systems/NPC
  */
 import { CHARACTERS, CHARACTER_LIST, bandOf, character } from '../data/characters.js';
 import { lineFor } from '../data/dialogue.js';
 import { clamp } from '../core/util.js';
 
-export const KEYS = ['favor', 'trust', 'loyalty', 'stress'];
+export const KEYS = ['favor', 'trust', 'loyalty', 'stress', 'conflict'];
+/** 这两项只有下限 0（负面情绪不能是负的），其余可以为负。 */
+const NON_NEGATIVE = new Set(['stress', 'conflict']);
+
+/** 冲突阈值：达到后拒绝对话；再高会退出互助体系。 */
+export const CONFLICT_REFUSE = 60;
+export const CONFLICT_LEAVE = 80;
 
 /** 当前已登场人物（未到登场日的不显示，避免出现无法交互的空卡片）。 */
 export const active = (state) => CHARACTER_LIST.filter((c) => !c.unlockDay || state.day >= c.unlockDay);
@@ -21,12 +29,30 @@ export function change(state, id, deltas = {}) {
   if (!r) return null;
   for (const k of KEYS) {
     if (deltas[k]) {
-      const lo = k === 'stress' ? 0 : -100;
-      r[k] = clamp(r[k] + deltas[k], lo, 100);
+      const lo = NON_NEGATIVE.has(k) ? 0 : -100;
+      r[k] = clamp((r[k] ?? 0) + deltas[k], lo, 100);
     }
   }
   r.met = true;
   return r;
+}
+
+/** 综合关系档位：冲突优先判定，避免"好感很高但已经翻脸"被显示成朋友。 */
+export function relationBand(state, id) {
+  const r = rel(state, id);
+  if (!r) return '未知';
+  if ((r.conflict ?? 0) >= CONFLICT_LEAVE) return '敌对';
+  if ((r.conflict ?? 0) >= CONFLICT_REFUSE) return '紧张';
+  if ((r.favor ?? 0) >= 80 && (r.trust ?? 0) >= 60) return '生死之交';
+  if ((r.favor ?? 0) >= 50) return '信任';
+  if ((r.favor ?? 0) >= 25) return '搭伙';
+  if ((r.favor ?? 0) <= -25) return '敌意';
+  return '陌生';
+}
+
+/** 冲突值是否会挡住交互。 */
+export function hostile(state, id) {
+  return (rel(state, id)?.conflict ?? 0) >= CONFLICT_REFUSE;
 }
 
 export function markMet(state, id) {
@@ -54,6 +80,9 @@ export function pressureEvent(state, id) {
 export function talk(state, id) {
   const c = character(id);
   if (!c || !rel(state, id)) return { ok: false, reason: '这个人还没有登场' };
+  if (hostile(state, id)) {
+    return { ok: false, reason: `${c.name}现在不想和你说话（冲突 ${Math.round(rel(state, id).conflict ?? 0)}）` };
+  }
   const key = `talk_${id}_d${state.day}`;
   const first = !state.flags[key];
   const l = line(state, id);
@@ -61,7 +90,7 @@ export function talk(state, id) {
     ok: true,
     minutes: 20,
     notes: l ? [`${c.name}：${l}`] : [`你和${c.name}说了几句话。`],
-    npc: first ? { [id]: { favor: 3, trust: 2, stress: -4 } } : {},
+    npc: first ? { [id]: { favor: 3, trust: 2, stress: -4, conflict: -2 } } : {},
     stats: { mind: first ? 3 : 0 },
     mind: { xp: first ? 6 : 2 },
     flags: { [key]: true, [`met_${id}`]: true },
@@ -78,7 +107,7 @@ export function give(state, id, itemId = 'canned') {
     minutes: 15,
     items: { [itemId]: -1 },
     notes: [`你把一份物资递给${c.name}。他没有推辞太久。`],
-    npc: { [id]: { favor: 8, trust: 5, loyalty: 4, stress: -12 } },
+    npc: { [id]: { favor: 8, trust: 5, loyalty: 4, stress: -12, conflict: -6 } },
     stats: { mind: 4 },
     fame: 2,
     flags: { [`met_${id}`]: true, [`gave_${id}`]: true },
@@ -205,6 +234,36 @@ export function dailySettlement(state) {
     state.aid.morale = clamp(state.aid.morale + delta, 0, 100);
     notes.push(`互助体系产出：食物 +${m}${m >= 2 ? `、净水 +${Math.floor(m / 2)}` : ''}（士气 ${Math.round(state.aid.morale)}）`);
     if (state.aid.morale <= 15) notes.push('互助体系士气低落，有人开始藏私。');
+  }
+  return { notes, changes };
+}
+
+/**
+ * 每日关系漂移（商业化升级 §四.3「NPC 关系」）。
+ * 长期高压 + 低好感 → 冲突自己会长；关系好 + 压力低 → 冲突慢慢消。
+ * 冲突到 CONFLICT_LEAVE 的人会退出互助体系，让"把人得罪光"真的有代价。
+ */
+export function relationshipDrift(state) {
+  const notes = [];
+  const changes = {};
+  for (const c of active(state)) {
+    const r = rel(state, c.id);
+    if (!r || !r.met) continue;
+    r.conflict = clamp(r.conflict ?? 0, 0, 100);
+
+    if (r.stress >= 60 && r.favor < 30) r.conflict = clamp(r.conflict + 5, 0, 100);
+    else if (r.favor >= 50 && r.stress < 40) r.conflict = clamp(r.conflict - 3, 0, 100);
+
+    if (r.conflict >= CONFLICT_LEAVE && inAid(state, c.id)) {
+      state.aid.joined = (state.aid.joined ?? []).filter((x) => x !== c.id);
+      state.aid.members = Math.max(0, state.aid.members - 1);
+      state.aid.morale = clamp(state.aid.morale - 12, 0, 100);
+      changes.members = (changes.members ?? 0) - 1;
+      notes.push(`${c.name}退出了互助体系，理由是"不想再欠你的"。`);
+    } else if (r.conflict >= CONFLICT_LEAVE && !state.flags[`conflict_${c.id}`]) {
+      state.flags[`conflict_${c.id}`] = true;
+      notes.push(`${c.name}现在见到你会绕路走。`);
+    }
   }
   return { notes, changes };
 }

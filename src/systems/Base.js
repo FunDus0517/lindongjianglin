@@ -123,7 +123,7 @@ export function craft(state, recipeId) {
   const changes = { ...Object.fromEntries(Object.entries(r.in).map(([k, v]) => [k, -v])), ...r.out };
   const applied = applyItems(state, changes);
   if (!applied.ok) return applied;
-  return { ok: true, minutes: r.minutes, notes: [`加工完成：${r.name}。`], toasts: [{ text: `产出 ${r.name}`, kind: 'good' }] };
+  return { ok: true, minutes: r.minutes, notes: [`加工完成：${r.name}。`], toasts: [{ text: `产出 ${r.name}`, kind: 'good' }], daily: { craft: 1 } };
 }
 
 /** 每日产出（供暖/能源消耗、温室产出），在每日刷新时结算。 */

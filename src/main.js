@@ -46,6 +46,8 @@ const PAGES = {
   mind: () => import('./pages/Mind.js').then((m) => m.MindPage),
   characters: () => import('./pages/Characters.js').then((m) => m.CharactersPage),
   quest: () => import('./pages/Quest.js').then((m) => m.QuestPage),
+  duel: () => import('./pages/Duel.js').then((m) => m.DuelPage),
+  achievement: () => import('./pages/Achievement.js').then((m) => m.AchievementPage),
   base: () => import('./pages/Base.js').then((m) => m.BasePage),
   settings: () => import('./pages/Settings.js').then((m) => m.SettingsPage),
   ending: () => import('./pages/Ending.js').then((m) => m.EndingPage),
@@ -76,7 +78,7 @@ function prefetchAll() {
 }
 
 /** 需要一局游戏才能进入的页面。 */
-const NEEDS_RUN = ['game', 'action', 'warehouse', 'mind', 'characters', 'quest', 'base', 'event', 'battle', 'ending', 'milestone'];
+const NEEDS_RUN = ['game', 'action', 'warehouse', 'mind', 'characters', 'quest', 'base', 'event', 'battle', 'ending', 'milestone', 'duel', 'achievement'];
 
 let state = null;
 const shell = createShell(document.getElementById('app'));

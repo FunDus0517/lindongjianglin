@@ -4,18 +4,43 @@
  * @module pages/Game
  */
 import { h } from '../core/dom.js';
-import { btn, card, empty, logItem, sectionTitle, tag } from '../ui/components.js';
+import { btn, card, empty, logItem, modal, progress, sectionTitle, tag } from '../ui/components.js';
 import { statGrid } from '../ui/shell.js';
 import { fmtDuration } from '../core/util.js';
 import { capacity, countCategory, used } from '../systems/Inventory.js';
 import { condition } from '../systems/Survival.js';
 import { band } from '../systems/Fame.js';
+import * as Achievement from '../systems/Achievement.js';
 import * as Base from '../systems/Base.js';
+import * as Daily from '../systems/Daily.js';
+import * as Death from '../systems/Death.js';
+import * as Duel from '../systems/Duel.js';
 import * as Faction from '../systems/Faction.js';
 import * as GameTime from '../systems/GameTime.js';
+import * as Growth from '../systems/Growth.js';
 import * as Mind from '../systems/Mind.js';
 import * as Quest from '../systems/Quest.js';
+import * as Weather from '../systems/Weather.js';
 import { recap } from '../systems/Story.js';
+import * as Tutorial from '../data/tutorial.js';
+
+/** 阶段总结弹窗（第 30 天起每 10 天一份；不结束游戏，只是给你一个评价）。 */
+function reportSheet(state) {
+  const list = [...(state.reports ?? [])].reverse();
+  modal({
+    title: '阶段总结',
+    body: [
+      h('div', { class: 'small muted' }, '这些不是结局——你还在继续。它只是按目前的活法给出的评价。'),
+      h('div', { class: 'col', style: { marginTop: '12px' } }, list.map((r) => h('div', { class: 'line' },
+        h('span', { class: 'ic' }, '📄'),
+        h('div', { class: 'grow' },
+          h('div', { class: 'row between' },
+            h('span', { class: 'strong' }, `第 ${r.day} 天 · ${r.title}`),
+            h('span', { class: 'xs muted' }, `战力 ${r.stats?.战力 ?? '—'}`)),
+          h('div', { class: 'xs muted' }, r.desc?.split('\n')[0] ?? ''))))),
+    ],
+  });
+}
 
 export function Game(ctx) {
   const state = ctx.state;
@@ -24,6 +49,15 @@ export function Game(ctx) {
   const hint = Mind.hint(state);
   const active = Quest.today(state);
   const cap = capacity(state);
+  const growth = Growth.view(state);
+  const daily = Daily.view(state);
+  const fc = Weather.forecast(state);
+  const risk = Death.atRisk(state);
+  const showTutorial = Tutorial.shouldShow(state);
+  const step = Tutorial.stepOf(state);
+  const duelReady = Duel.view(state).filter((d) => !d.locked).length;
+  const ach = Achievement.view(state);
+  const lastReport = (state.reports ?? [])[(state.reports ?? []).length - 1] ?? null;
 
   const resources = [
     { icon: '🍖', label: '食物', value: countCategory(state, 'food') },
@@ -35,6 +69,24 @@ export function Game(ctx) {
   ];
 
   return h('div', { class: 'col' },
+    // 新手引导（第 1—2 天、未看完时出现，可跳过）
+    showTutorial
+      ? card([
+        h('div', { class: 'row between' },
+          h('span', { class: 'strong' }, `新手引导 ${Tutorial.stepIndex(state) + 1} / ${Tutorial.TUTORIAL_STEPS}`),
+          tag('可以跳过', '')),
+        h('div', { class: 'strong', style: { marginTop: '10px' } }, step.title),
+        h('div', { class: 'small muted', style: { marginTop: '6px' } }, step.text),
+        h('div', { class: 'xs muted', style: { marginTop: '8px' } }, `💡 ${step.hint}`),
+        h('div', { class: 'btn-group', style: { marginTop: '12px' } },
+          btn(Tutorial.stepIndex(state) >= Tutorial.TUTORIAL_STEPS - 1 ? '开始游戏' : '下一步', {
+            kind: 'primary', block: true,
+            onClick: () => { Tutorial.advance(state); ctx.refresh(); },
+          }),
+          btn('跳过引导', { kind: 'ghost', sm: true, onClick: () => { Tutorial.skip(state); ctx.refresh(); } })),
+      ], { cls: 'mind' })
+      : null,
+
     // 光脑提示条
     card([
       h('div', { class: 'row between' },
@@ -51,10 +103,33 @@ export function Game(ctx) {
     card([
       sectionTitle('生存状态', h('span', { class: 'xs muted' }, `${GameTime.phaseLabel(state)} · 剩余 ${fmtDuration(GameTime.remaining(state))}`)),
       statGrid(state),
+      h('div', { class: 'row wrap', style: { gap: '6px', marginTop: '10px' } },
+        tag(`${fc.w.icon} 明日预报 ${fc.w.name}`, 'mind'),
+        tag(`生存等级 Lv.${growth.level}｜${growth.title}`, 'good'),
+        state.flags.endless ? tag(`♾️ 无尽模式 · 第 ${state.day - 30} 天`, 'mind') : null,
+        risk.total > 0 ? tag(`⚠️ 倒下会丢 ${risk.total} 件`, 'warn') : null),
       h('div', { class: 'btn-group', style: { marginTop: '12px' } },
         btn('休息到次日 06:00', { onClick: () => ctx.sleep(), disabled: state.time < 1080, reason: '22:00 之后才能休息', block: true, kind: 'primary' }),
         btn('行动', { onClick: () => ctx.go('action') })),
     ]),
+
+    // 每日任务（商业化升级新增）：完成即时发奖，不设领取步骤
+    daily
+      ? card([
+        h('div', { class: 'row between' },
+          h('span', { class: 'strong' }, `每日任务 ${daily.done} / ${daily.total}`),
+          daily.streak > 0 ? tag(`连续 ${daily.streak} 天`, 'good') : tag(daily.bonus ? '今日已领完' : '每天 06:00 刷新', '')),
+        h('div', { class: 'col', style: { marginTop: '10px' } }, daily.tasks.map((t) => h('div', { class: 'stat' },
+          h('div', { class: 'stat-head' },
+            h('span', null, `${t.done ? '✅' : '▫️'} ${t.name}`),
+            h('span', { class: 'strong' }, `${t.progress} / ${t.target}`)),
+          h('div', { class: 'bar ' + (t.done ? 'energy' : 'mind') },
+            h('i', { style: { width: `${Math.min(100, (t.progress / t.target) * 100)}%` } }))))),
+        h('div', { class: 'row between', style: { marginTop: '10px' } },
+          h('span', { class: 'xs muted' }, '全部完成额外奖励：货币 +40、晶核 +1、经验 +20'),
+          btn('成就与成长', { kind: 'ghost', sm: true, onClick: () => ctx.go('achievement') })),
+      ], { cls: daily.bonus ? 'flat' : '' })
+      : null,
 
     // 第二信息区
     card([
@@ -72,8 +147,20 @@ export function Game(ctx) {
         ...Faction.visible(state).filter((f) => f.id !== 'aidnet').map((f) => tag(`${f.icon} ${f.name} ${f.value}`, f.value >= 25 ? 'good' : f.value <= -25 ? 'bad' : ''))),
       h('div', { class: 'btn-group', style: { marginTop: '10px' } },
         btn('人物与互助', { kind: 'ghost', sm: true, onClick: () => ctx.go('characters') }),
-        btn('设施升级', { kind: 'ghost', sm: true, onClick: () => ctx.go('base') })),
+        btn('设施升级', { kind: 'ghost', sm: true, onClick: () => ctx.go('base') }),
+        btn(`对战（可打 ${duelReady}）`, { kind: duelReady > 0 ? 'mind' : 'ghost', sm: true, onClick: () => ctx.go('duel') }),
+        btn(`成就 ${ach.unlocked}/${ach.total}`, { kind: 'ghost', sm: true, onClick: () => ctx.go('achievement') })),
     ]),
+
+    // 阶段总结（无尽模式）：不结束游戏，只是一个评价
+    lastReport
+      ? card([
+        h('div', { class: 'row between' },
+          h('span', { class: 'strong' }, `📄 第 ${lastReport.day} 天阶段总结：${lastReport.title}`),
+          btn('全部总结', { kind: 'ghost', sm: true, onClick: () => reportSheet(state) })),
+        h('div', { class: 'small muted', style: { marginTop: '6px' } }, '这不是结局。冬天没有结束，你也没有。'),
+      ], { cls: 'flat' })
+      : null,
 
     // 第三信息区
     card([

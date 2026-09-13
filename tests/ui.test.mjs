@@ -1,4 +1,4 @@
-﻿/**
+/**
  * UI 冒烟测试：用最小 DOM 垫片渲染每一个页面，捕获页面级运行期错误
  * （未定义导入、空引用、渲染分支抛异常）。不引入任何第三方依赖。
  * 运行：node --test tests/
@@ -22,6 +22,21 @@ const Explore = await import('../src/systems/Explore.js');
 const Inventory = await import('../src/systems/Inventory.js');
 const Market = await import('../src/systems/Market.js');
 const Base = await import('../src/systems/Base.js');
+const { ACHIEVEMENTS } = await import('../src/data/achievements.js');
+const { DAILY_POOL } = await import('../src/data/dailies.js');
+
+/**
+ * 静音"发奖系统"：成就会在结算里即时发货币/晶核，会盖过"这笔操作扣了多少"的断言。
+ * 只标记注入的存档状态为「奖励已发完」，生产逻辑不动；发奖本身由 commercial.test.mjs 验证。
+ */
+function muteRewards(state) {
+  state.achievements = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, { day: state.day }]));
+  state.daily = {
+    day: state.day,
+    tasks: [{ id: DAILY_POOL[0].id, progress: DAILY_POOL[0].target, done: true }],
+    done: 1, streak: 0, metrics: {}, bonus: true,
+  };
+}
 
 const pages = {
   Home: (await import('../src/pages/Home.js')).Home,
@@ -222,6 +237,7 @@ test('UI：第 21 天交易区可用（买卖按钮、库存与货币联动）',
   assert.ok((sell.handlers.click ?? []).length > 0, '卖出按钮不得是死按钮');
 
   // 真正的买入会改变状态（走 ctx.apply → 唯一结算入口）
+  muteRewards(state);   // 否则成就/每日任务的发奖会盖过买入本身的扣款
   const firstGood = Market.offers(state)[0].id;
   const stockBefore = Market.remaining(state, firstGood);
   buy.click();

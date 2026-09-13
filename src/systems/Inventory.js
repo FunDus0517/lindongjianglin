@@ -2,8 +2,9 @@
  * 仓库与资源（项目书 §6）。任何资源消耗都必须即时同步到仓库 —— 这里是唯一入口。
  * @module systems/Inventory
  */
-import { ITEMS, item } from '../data/items.js';
+import { ITEMS, item, slotName } from '../data/items.js';
 import { enhanceLevel } from './Mind.js';
+import * as Growth from './Growth.js';
 
 export const BASE_CAPACITY = 60;
 export const STORAGE_PER_LEVEL = 40;
@@ -19,8 +20,13 @@ export function countCategory(state, cat) {
   return total;
 }
 
+/** 容量 = 基础 + 仓库等级 + 设施强化 + 装备载重 + 生存等级。 */
 export const capacity = (state) =>
-  BASE_CAPACITY + (state.base.storage ?? 0) * STORAGE_PER_LEVEL + enhanceLevel(state, 'facility') * FACILITY_ENHANCE_CAPACITY;
+  BASE_CAPACITY
+  + (state.base.storage ?? 0) * STORAGE_PER_LEVEL
+  + enhanceLevel(state, 'facility') * FACILITY_ENHANCE_CAPACITY
+  + equipStats(state).carry
+  + Growth.bonus(state).capacity;
 
 export function used(state) {
   let total = 0;
@@ -79,7 +85,7 @@ export function consume(state, id) {
   const def = item(id);
   if (!def.use) return { ok: false, reason: `${def.name}不能直接使用` };
   remove(state, id, 1);
-  return { ok: true, stats: { ...def.use }, notes: [`你使用了 ${def.name}。`] };
+  return { ok: true, stats: { ...def.use }, notes: [`你使用了 ${def.name}。`], daily: { eat: 1 } };
 }
 
 /** 仓库列表：按分类分组，支持搜索（项目书 §6）。 */
@@ -95,34 +101,54 @@ export function list(state, { cat, query } = {}) {
 
 export const isWorn = (state, id) => (state.worn ?? []).includes(id);
 
-/** 当前穿戴提供的战斗与御寒加成。 */
+export const wornIn = (state, slotId) => (state.worn ?? []).find((id) => item(id).slot === slotId) ?? null;
+
+/**
+ * 当前穿戴提供的加成（商业化升级 §七「装备系统」）。
+ * 武器取最大值（同时带两把没有意义），其余按槽位累加。
+ */
 export function equipStats(state) {
-  let weapon = 0, warmthResist = 0;
+  let weapon = 0, warmthResist = 0, defense = 0, carry = 0, loot = 0, mind = 0, risk = 0;
   for (const id of state.worn ?? []) {
     const e = item(id).equip ?? {};
     weapon = Math.max(weapon, e.weapon ?? 0);
     warmthResist += e.warmthResist ?? 0;
+    defense += e.defense ?? 0;
+    carry += e.carry ?? 0;
+    loot += e.loot ?? 0;
+    mind += e.mind ?? 0;
+    risk += e.risk ?? 0;
   }
-  return { weapon, warmthResist, gear: warmthResist };
+  return { weapon, warmthResist, defense, carry, loot, mind, risk, gear: warmthResist };
 }
 
-/** 装备/卸下。武器槽互斥（同一次只能拿一件近战武器）。 */
+/** 装备/卸下。一个槽位只能穿一件：换上新的会自动脱下旧的。 */
 export function equip(state, id, on = true) {
   const def = item(id);
   if (on && !has(state, id)) return { ok: false, reason: `没有 ${def.name}` };
+  if (on && !def.slot) return { ok: false, reason: `${def.name}不是可穿戴装备` };
   state.worn = state.worn ?? [];
+  let replaced = null;
   if (on) {
-    if (def.equip?.weapon) {
-      state.worn = state.worn.filter((w) => !(item(w).equip?.weapon));
-    }
+    const same = state.worn.filter((w) => item(w).slot === def.slot && w !== id);
+    replaced = same.length > 0 ? item(same[0]).name : null;
+    state.worn = state.worn.filter((w) => item(w).slot !== def.slot);
     if (!state.worn.includes(id)) state.worn.push(id);
   } else {
     state.worn = state.worn.filter((w) => w !== id);
   }
-  const notes = [on ? `你装备了 ${def.name}。` : `你卸下了 ${def.name}。`];
+  const notes = [on ? `你装备了 ${def.name}（${slotName(def.slot)}）。` : `你卸下了 ${def.name}。`];
+  if (replaced) notes.push(`换下了之前的${replaced}。`);
   const flags = {};
   if (on && id === 'down_jacket') { flags.prepared_out = true; notes.push('外套把风挡在外面，行动范围变大了。'); }
-  return { ok: true, minutes: 5, notes, flags, stats: on && id === 'down_jacket' ? { mind: 2 } : {}, toast: { text: `${on ? '装备' : '卸下'} ${def.name}`, kind: 'info' } };
+  return {
+    ok: true,
+    minutes: 5,
+    notes,
+    flags,
+    stats: on && id === 'down_jacket' ? { mind: 2 } : {},
+    toast: { text: `${on ? '装备' : '卸下'} ${def.name}`, kind: 'info' },
+  };
 }
 
 /** 交易区购买（项目书 §11 交易区）：货币换物资，容量不足时拒绝。 */
@@ -138,6 +164,7 @@ export function purchase(state, id, price) {
     minutes: 15,
     notes: [`你花 ${price} 货币买下了 ${item(id).name}。`],
     toasts: [{ text: `${item(id).name} 到手｜货币 −${price}`, kind: 'good' }],
+    daily: { trade: 1 },
   };
 }
 

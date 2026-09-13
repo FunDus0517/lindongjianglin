@@ -33,8 +33,8 @@ export const ITEMS = {
   frostbite_salve: { id: 'frostbite_salve', name: '冻伤药', cat: 'medical', bulk: 1, value: 8, use: { hp: 10, warmth: 8 }, desc: '冻伤专用，寒潮季的身价翻倍。' },
 
   // 武器
-  pipe:  { id: 'pipe', name: '钢管', cat: 'weapon', bulk: 2, value: 3, equip: { weapon: 1 }, desc: '最朴素的近战武器。' },
-  knife: { id: 'knife', name: '匕首', cat: 'weapon', bulk: 1, value: 6, equip: { weapon: 2 }, desc: '近身、快速、需要勇气。' },
+  pipe:  { id: 'pipe', name: '钢管', cat: 'weapon', bulk: 2, value: 3, slot: 'weapon', equip: { weapon: 1 }, desc: '最朴素的近战武器。' },
+  knife: { id: 'knife', name: '匕首', cat: 'weapon', bulk: 1, value: 6, slot: 'weapon', equip: { weapon: 2 }, desc: '近身、快速、需要勇气。' },
   ammo:  { id: 'ammo', name: '弹药', cat: 'weapon', bulk: 1, value: 5, desc: '远程选项的消耗品。' },
 
   // 农业
@@ -43,13 +43,35 @@ export const ITEMS = {
   produce:    { id: 'produce', name: '种植产物', cat: 'food', bulk: 1, value: 4, use: { hunger: 26, mind: 4 }, desc: '温室里长出来的绿色，比罐头贵得多。' },
 
   // 御寒装备（可穿戴，不计入普通消耗）
-  down_jacket: { id: 'down_jacket', name: '羽绒服', cat: 'build', bulk: 2, value: 14, equip: { warmthResist: 1 }, desc: '室外行动必备，体温压力的第一层缓冲。' },
-  snow_boots:  { id: 'snow_boots', name: '雪地靴', cat: 'build', bulk: 2, value: 10, equip: { warmthResist: 1 }, desc: '冻伤多数从脚开始。' },
+  down_jacket: { id: 'down_jacket', name: '羽绒服', cat: 'build', bulk: 2, value: 14, slot: 'coat', equip: { warmthResist: 1 }, desc: '室外行动必备，体温压力的第一层缓冲。' },
+  snow_boots:  { id: 'snow_boots', name: '雪地靴', cat: 'build', bulk: 2, value: 10, slot: 'boots', equip: { warmthResist: 1 }, desc: '冻伤多数从脚开始。' },
+
+  // 装备（槽位制：武器 / 外套 / 鞋 / 工具 / 面具，每槽只能穿一件）
+  ice_axe:     { id: 'ice_axe', name: '冰镐', cat: 'weapon', bulk: 2, value: 16, slot: 'weapon', equip: { weapon: 2, loot: 1 }, desc: '能敲冰、能撬门、也能当武器。搜物资时特别顺手。' },
+  hunting_rifle: { id: 'hunting_rifle', name: '猎枪', cat: 'weapon', bulk: 3, value: 26, slot: 'weapon', equip: { weapon: 4, risk: -1 }, desc: '声音会引来别的东西，但威慑力是真的。' },
+  fur_coat:    { id: 'fur_coat', name: '皮草大衣', cat: 'build', bulk: 3, value: 24, slot: 'coat', equip: { warmthResist: 2, mind: 1 }, desc: '从变异体身上剥下来的，暖得不太讲道理。' },
+  insulated_boots: { id: 'insulated_boots', name: '加厚雪地靴', cat: 'build', bulk: 3, value: 20, slot: 'boots', equip: { warmthResist: 2 }, desc: '内衬是拆下来的保温层。' },
+  backpack:    { id: 'backpack', name: '行军背囊', cat: 'build', bulk: 2, value: 18, slot: 'tool', equip: { carry: 12 }, desc: '仓库装不下的，背在身上。' },
+  headlamp:    { id: 'headlamp', name: '头灯', cat: 'build', bulk: 1, value: 12, slot: 'tool', equip: { loot: 1, mind: 1 }, desc: '夜里翻东西不至于摸瞎。' },
 
   // 特殊
   blueprint: { id: 'blueprint', name: '蓝图', cat: 'special', bulk: 1, value: 20, desc: '解锁高级设施与强化路线。' },
-  gas_mask:  { id: 'gas_mask', name: '防毒面具', cat: 'special', bulk: 1, value: 18, desc: '第二季毒雾的入场券。' },
+  gas_mask:  { id: 'gas_mask', name: '防毒面具', cat: 'special', bulk: 1, value: 18, slot: 'mask', equip: { defense: 1 }, desc: '第二季毒雾的入场券。' },
 };
+
+/** 装备槽（界面按这个顺序展示）。一项装备只能属于一个槽。 */
+export const SLOTS = [
+  { id: 'weapon', name: '武器', icon: '🗡️' },
+  { id: 'coat', name: '外套', icon: '🧥' },
+  { id: 'boots', name: '鞋', icon: '🥾' },
+  { id: 'tool', name: '工具', icon: '🎒' },
+  { id: 'mask', name: '面具', icon: '😷' },
+];
+
+export const slot = (id) => SLOTS.find((s) => s.id === id) ?? null;
+export const slotName = (id) => slot(id)?.name ?? id;
+/** 装备加成字段的中文名，界面直接用。 */
+export const EQUIP_LABEL = { weapon: '武器', warmthResist: '御寒', defense: '防护', carry: '载重', loot: '搜刮', mind: '精神', risk: '威慑' };
 
 export const item = (id) => ITEMS[id] ?? { id, name: id, cat: 'special', bulk: 1, value: 0, desc: '未知物品' };
 export const ITEM_LIST = Object.values(ITEMS);

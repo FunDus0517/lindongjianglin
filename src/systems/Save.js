@@ -17,7 +17,9 @@ const storage = () => (typeof localStorage === 'undefined' ? null : localStorage
 export function createState(seed = Math.floor(Math.random() * 1e9)) {
   const npcs = {};
   for (const c of Object.values(CHARACTERS)) {
-    npcs[c.id] = { ...c.initial, met: false };
+    // 关系五个维度先给全默认值：data/characters.js 里只写了各自关心的轴，
+    // 缺项会让界面算出 NaN（商业化升级新增的 conflict 就是这种情况）。
+    npcs[c.id] = { favor: 0, trust: 0, loyalty: 0, stress: 0, conflict: 0, ...c.initial, met: false };
   }
   const factions = {};
   for (const f of FACTION_LIST) factions[f.id] = { ...f.initial };
@@ -40,6 +42,13 @@ export function createState(seed = Math.floor(Math.random() * 1e9)) {
     enhance: { person: 0, weapon: 0, gear: 0, facility: 0, greenhouse: 0 },
     base: { shelter: 0, storage: 0, heating: 0, power: 0, greenhouse: 0, medical: 0, defense: 0, workshop: 0 },
     baseUpgrades: { day: 1, count: 0 },
+    // 商业化升级新增：每日任务 / 成就 / 角色成长 / 新手引导
+    daily: { day: 1, tasks: [], done: 0, streak: 0, metrics: {}, bonus: false },
+    achievements: {},
+    growth: { level: 1, xp: 0 },
+    tutorial: { step: 0, done: false },
+    reports: [],   // 无尽模式的阶段总结（第 30 天起每 10 天一份）
+    death: { deaths: 0, recent: [] },   // 倒地记录 + 最近入账（倒地会丢这一批）
     npcs,
     factions,
     fame: 0,
@@ -86,6 +95,16 @@ export function restore(raw) {
   merged.stats = { ...base.stats, ...(data.stats ?? {}) };
   merged.base = { ...base.base, ...(data.base ?? {}) };
   merged.baseUpgrades = { ...base.baseUpgrades, ...(data.baseUpgrades ?? {}) };
+  merged.daily = { ...base.daily, ...(data.daily ?? {}) };
+  if (!Array.isArray(merged.daily.tasks)) merged.daily.tasks = [];
+  merged.daily.metrics = { ...(data.daily?.metrics ?? {}) };
+  merged.achievements = { ...(data.achievements ?? {}) };
+  merged.growth = { ...base.growth, ...(data.growth ?? {}) };
+  merged.tutorial = { ...base.tutorial, ...(data.tutorial ?? {}) };
+  merged.reports = Array.isArray(data.reports) ? data.reports.slice(-12) : [];
+  merged.death = { ...base.death, ...(data.death ?? {}) };
+  if (!Array.isArray(merged.death.recent)) merged.death.recent = [];
+  merged.death.deaths = Number(merged.death.deaths) || 0;
   merged.enhance = { ...base.enhance, ...(data.enhance ?? {}) };
   merged.inventory = { ...(data.inventory ?? {}) };
   merged.flags = { ...(data.flags ?? {}) };

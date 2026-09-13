@@ -22,10 +22,11 @@
   --c-bad-soft: rgba(239, 106, 90, 0.16);
   --c-frost: #a9d4ff;
 
-  --r-card: 16px;
-  --r-card-lg: 20px;
-  --r-sheet: 26px;
-  --r-btn: 12px;
+  /* 圆角：iOS 卡片/弹层/按钮尺度 */
+  --r-card: 24px;
+  --r-card-lg: 26px;
+  --r-sheet: 28px;
+  --r-btn: 16px;
   --r-chip: 999px;
 
   --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
@@ -33,10 +34,15 @@
   --t-fast: 160ms;
   --t: 240ms;
   --t-slow: 300ms;
+  --t-page: 260ms;   /* 页面切换：260—320ms 区间内取最短，比原来只慢 20ms */
+  --t-press: 200ms;  /* 按钮按下：需求指定的 .2s */
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-ios: cubic-bezier(0.32, 0.72, 0, 1);   /* iOS 推进感（末端收得住，带回弹味道） */
 
-  --shadow-1: 0 2px 10px rgba(0, 0, 0, 0.35);
-  --shadow-2: 0 10px 32px rgba(0, 0, 0, 0.5);
+  /* 阴影三层：底色是深蓝黑（不是纯灰），每层两段（贴地细影 + 大范围柔光） */
+  --shadow-1: 0 1px 2px rgba(2, 5, 12, 0.3), 0 6px 18px rgba(3, 7, 16, 0.34);
+  --shadow-2: 0 2px 6px rgba(2, 5, 12, 0.36), 0 16px 40px rgba(3, 7, 16, 0.5);
+  --shadow-3: 0 4px 12px rgba(2, 5, 12, 0.42), 0 26px 64px rgba(3, 7, 16, 0.6);
 
   --fs-xs: 12px; --fs-sm: 13px; --fs-md: 14px; --fs-lg: 16px;
   --fs-xl: 20px; --fs-2xl: 26px; --fs-3xl: 34px;

@@ -41,7 +41,47 @@ export function evaluate(state) {
   return 'survivor';
 }
 
-/** 应用结局并冻结一局数据快照（结局页展示本局统计）。 */
+/** 本局统计快照（结局页与阶段报告共用同一份口径）。 */
+export function snapshot(state) {
+  const view = viewOf(state);
+  return {
+    存活天数: state.day,
+    剩余生命: Math.round(state.stats.hp),
+    体温: Math.round(state.stats.warmth),
+    精神: Math.round(state.stats.mind),
+    战力: state.power,
+    战力榜排名: `#${view.rank}`,
+    锋芒值: `${state.fame}（${band(state.fame).label}）`,
+    光脑等级: state.mindLevel,
+    库存价值: view.stock,
+    货币: state.currency,
+    晶核: state.cores,
+    互助体系: `${view.aidMembers} 人｜士气 ${Math.round(state.aid?.morale ?? 0)}`,
+    队友: state.allies > 0 ? '龙九星' : '无',
+    凛冬城立场: view.lindong,
+    掠夺者立场: view.raiders,
+    基地等级: Object.values(state.base).reduce((a, b) => a + b, 0),
+  };
+}
+
+/**
+ * 阶段报告（商业化升级 §六：不设置固定结局）。
+ * 只计算"如果此刻收尾会是哪个结局"，**不结束游戏** —— 玩家可以继续活下去。
+ */
+export function report(state, day = state.day) {
+  const id = evaluate(state);
+  const def = ending(id);
+  return {
+    day,
+    endingId: id,
+    title: def?.title ?? '—',
+    desc: def?.desc ?? '',
+    stats: snapshot(state),
+    at: { day: state.day, time: state.time },
+  };
+}
+
+/** 应用结局并冻结一局数据快照（结局页展示本局统计）。仅在死亡时调用。 */
 export function apply(state, id) {
   const def = ending(id) ?? ending('survivor');
   const view = viewOf(state);
@@ -50,24 +90,7 @@ export function apply(state, id) {
     day: state.day,
     title: def.title,
     kind: def.kind,
-    stats: {
-      存活天数: state.day,
-      剩余生命: Math.round(state.stats.hp),
-      体温: Math.round(state.stats.warmth),
-      精神: Math.round(state.stats.mind),
-      战力: state.power,
-      战力榜排名: `#${view.rank}`,
-      锋芒值: `${state.fame}（${band(state.fame).label}）`,
-      光脑等级: state.mindLevel,
-      库存价值: view.stock,
-      货币: state.currency,
-      晶核: state.cores,
-      互助体系: `${view.aidMembers} 人｜士气 ${Math.round(state.aid?.morale ?? 0)}`,
-      队友: state.allies > 0 ? '龙九星' : '无',
-      凛冬城立场: view.lindong,
-      掠夺者立场: view.raiders,
-      基地等级: Object.values(state.base).reduce((a, b) => a + b, 0),
-    },
+    stats: snapshot(state),
     at: { day: state.day, time: state.time },
   };
   return state.ending;

@@ -23,9 +23,26 @@ import * as Weather from '../src/systems/Weather.js';
 import * as Ending from '../src/systems/Ending.js';
 import * as Faction from '../src/systems/Faction.js';
 import * as Market from '../src/systems/Market.js';
+import * as Death from '../src/systems/Death.js';
+import { ACHIEVEMENTS } from '../src/data/achievements.js';
+import { DAILY_POOL } from '../src/data/dailies.js';
 import { applyOutcome, resolveChoice } from '../src/core/effects.js';
 
 const fresh = (seed = 20260913) => Save.createState(seed);
+
+/**
+ * 静音"发奖系统"。成就与每日任务都会在 applyOutcome 里即时发货币/晶核，
+ * 这会让"某一次操作精确扣了多少资源"的断言失真。这里只把注入的状态标记成
+ * 「奖励已发完」，不改生产逻辑；发奖本身由 commercial.test.mjs 单独验证。
+ */
+function muteRewards(state) {
+  state.achievements = Object.fromEntries(ACHIEVEMENTS.map((a) => [a.id, { day: state.day }]));
+  state.daily = {
+    day: state.day,
+    tasks: [{ id: DAILY_POOL[0].id, progress: DAILY_POOL[0].target, done: true }],
+    done: 1, streak: 0, metrics: {}, bonus: true,
+  };
+}
 
 test('存档：序列化 → 反序列化保持关键字段', () => {
   const s = fresh();
@@ -61,16 +78,31 @@ test('生存：室内第 1 天可以撑过 12 小时，极寒室外无装备会�
   assert.ok(outdoor.stats.hp < indoor.stats.hp, '失温必须真实扣血');
 });
 
-test('生存：生命归零产出冰封结局', () => {
+test('生存：生命归零不再结束一局 —— 倒地、丢失最近搜集的物资、原地复活', () => {
   const s = fresh();
-  s.stats.hp = 0.5;
-  s.stats.warmth = 0;
+  const kept = Inventory.count(s, 'canned');      // 初始物资：不该被倒地清掉
   s.day = 3;
   s.weather = 'cold_snap';
+  Inventory.add(s, 'metal', 4);
+  Death.recordGain(s, { metal: 4 }, '测试入账');   // 记录必须发生在"同一段时间线"里
+
+  s.stats.hp = 0.5;
+  s.stats.warmth = 0;
   Survival.tick(s, 120, { indoor: false });
-  assert.equal(Survival.checkDeath(s), 'ice');
-  GameTime.spend(s, 30, { indoor: false });
-  assert.equal(s.ending?.id, 'ice');
+  assert.equal(Survival.checkDeath(s), 'ice', '生命归零必须被判定为倒地');
+
+  const res = GameTime.spend(s, 30, { indoor: false });
+  assert.equal(s.ending, null, '倒地不再是结局');
+  assert.equal(res.cause, 'ice');
+  assert.ok(res.revived, '必须返回倒地结算');
+  assert.ok(s.stats.hp > 0, '倒地后必须能继续玩');
+  assert.equal(Inventory.count(s, 'metal'), 1, '最近搜集的 4 份金属必须丢失（初始那份不动）');
+  assert.equal(Inventory.count(s, 'canned'), kept, '倒地不该清空仓库');
+  assert.equal(Death.deaths(s), 1, '倒地次数必须记账');
+
+  // 同一批入账只算一次，不能反复扣
+  const again = Death.handle(s, 'ice');
+  assert.deepEqual(again.lost, {}, '同一次入账不能重复计算损失');
 });
 
 test('仓库：容量上限生效，超额新增被拒绝但不会丢东西', () => {
@@ -351,6 +383,7 @@ test('仓库：容量上限只约束新增，消耗材料永远不被容量拒�
 test('M3 循环：晶核结算与强化闭环（晶核来源不能是死系统）', () => {
   const s = fresh();
   s.day = 17;
+  muteRewards(s);   // 第 17 天会解锁"半程"成就（奖励含晶核），会污染下面这笔结算的精确断言
   for (const id of ['mutant_infected', 'horde']) {
     const def = Battle.enemyOf(id);
     assert.ok(def.drops.some(([dropId]) => dropId === 'cores'), `${def.name} 必须掉落晶核，否则强化系统无法闭环`);
@@ -444,6 +477,7 @@ test('交易区：价格随日期与势力变化，买卖受库存与货币约�
   assert.ok(friendly <= hostile, '与凛冬城关系好时不应更贵');
 
   Market.refresh(s);
+  muteRewards(s);   // 成就/每日任务会在同一笔结算里发货币，会盖过"买入扣款"
   const stock0 = Market.remaining(s, 'fuel');
   const cash0 = s.currency;
   applyOutcome(s, Market.buy(s, 'fuel', 1), { autosave: false });

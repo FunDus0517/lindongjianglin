@@ -4,6 +4,7 @@
  * @module systems/Power
  */
 import { equipStats } from './Inventory.js';
+import * as Growth from './Growth.js';
 import { enhanceLevel } from './Mind.js';
 
 export const BOARD_UNLOCK_DAY = 11;
@@ -30,7 +31,8 @@ export function calc(state) {
     Math.floor(state.stats.hp * 0.12) +
     Math.floor(state.stats.energy * 0.05) +
     Object.values(state.base).reduce((a, b) => a + b, 0) * 1.5 +
-    (state.allies ?? 0) * 12;
+    (state.allies ?? 0) * 12 +
+    Growth.bonus(state).power;      // 生存等级加成
   return Math.round(raw);
 }
 

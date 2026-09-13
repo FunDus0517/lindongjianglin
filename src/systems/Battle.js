@@ -20,12 +20,19 @@ export const playerDef = (state) =>
 export const playerAtk = (state) =>
   6 + Inventory.equipStats(state).weapon * 4 + Mind.enhanceLevel(state, 'weapon') * 3 + Math.floor((state.cores ?? 0) * 1.5) + (state.stats.mind < 30 ? -2 : 0);
 
-export function start(state, enemyId) {
+/**
+ * 开战。opts.stake 是这一战的"赌注"（NPC 对战用）：胜利后合并进结算，
+ * 例如打了掠夺者会让掠夺者立场下降。放在赌注里而不是敌人定义里，
+ * 是因为同一个敌人可能从不同剧情节点打起来，后果不一样。
+ */
+export function start(state, enemyId, opts = {}) {
   const e = ENEMIES[enemyId] ?? ENEMIES.raider;
   state.battle = {
     enemyId: e.id, name: e.name, icon: e.icon, level: e.level,
     hp: e.hp, maxHp: e.hp, atk: e.atk, def: e.def,
     round: 1, log: [e.intro], over: false, result: null,
+    stake: opts.stake ?? null,
+    source: opts.source ?? null,
   };
   state.active = { kind: 'battle', id: e.id };
   return state.battle;
@@ -150,6 +157,17 @@ function finish(state, { won, escaped, notes, stats = {}, items = {}, minutes })
     outcome.fame = e.level * 3;
     outcome.flags = { raider_defeated: b.enemyId.startsWith('raider') || state.flags.raider_defeated === true };
     outcome.notes = [...notes, dropNotes.length ? `战利品：${dropNotes.join('、')}` : '没有可以带走的东西。'];
+
+    // NPC 对战的赌注：胜利后的额外后果（阵营立场、人物冲突、Flag）
+    const win = b.stake?.win;
+    if (win) {
+      if (win.flags) outcome.flags = { ...outcome.flags, ...win.flags };
+      if (win.faction) outcome.faction = { ...(outcome.faction ?? {}), ...win.faction };
+      if (win.npc) outcome.npc = { ...(outcome.npc ?? {}), ...win.npc };
+      if (win.fame) outcome.fame += win.fame;
+      if (win.currency) outcome.currency = (outcome.currency ?? 0) + win.currency;
+      if (win.notes) outcome.notes = [...outcome.notes, ...win.notes];
+    }
   }
   return outcome;
 }

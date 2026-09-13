@@ -21,6 +21,8 @@ export const NAV = [
 ];
 export const MORE_NAV = [
   { id: 'quest', label: '任务', icon: '📋', route: 'quest' },
+  { id: 'duel', label: '对战', icon: '⚔️', route: 'duel' },
+  { id: 'achievement', label: '成就', icon: '🏆', route: 'achievement' },
   { id: 'base', label: '基地', icon: '🏗️', route: 'base' },
   { id: 'settings', label: '设置', icon: '⚙️', route: 'settings' },
 ];

@@ -7,7 +7,7 @@ body {
     radial-gradient(900px 600px at 100% 110%, #0d1a2e 0%, transparent 55%),
     var(--c-bg);
   color: var(--c-text);
-  font: var(--fs-md)/1.6 "Segoe UI", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  font: var(--fs-md)/1.6 -apple-system, "SF Pro Text", "PingFang SC", "Helvetica Neue", "Microsoft YaHei", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
@@ -17,7 +17,7 @@ h1, h2, h3, h4, p { margin: 0; }
 ::-webkit-scrollbar-thumb { background: var(--c-line-2); border-radius: 8px; }
 
 /* ---------- 移动端基础：点击延迟、选中、长按菜单 ---------- */
-button, .btn, .chip, .item, .card.tap, .tabs button, .bottomnav button, .side button {
+button, .btn, .chip, .item, .row-item, .card.tap, .tabs button, .bottomnav button, .side button {
   touch-action: manipulation;
   -webkit-user-select: none;
   user-select: none;
@@ -44,7 +44,7 @@ button, .btn, .chip, .item, .card.tap, .tabs button, .bottomnav button, .side bu
   }
 }
 /* 键盘可见焦点（无障碍基础） */
-button:focus-visible, .chip:focus-visible, .item:focus-visible, .card.tap:focus-visible, input:focus-visible {
+button:focus-visible, .chip:focus-visible, .item:focus-visible, .row-item:focus-visible, .card.tap:focus-visible, input:focus-visible {
   outline: 2px solid var(--c-mind);
   outline-offset: 2px;
 }
@@ -75,12 +75,13 @@ button:focus-visible, .chip:focus-visible, .item:focus-visible, .card.tap:focus-
 .main { min-height: 0; overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; }
 .page {
   padding: var(--sp-4) max(var(--sp-4), env(safe-area-inset-right)) calc(var(--nav-h) + var(--safe-b) + var(--sp-5)) max(var(--sp-4), env(safe-area-inset-left));
-  max-width: 900px; margin: 0 auto; animation: pageIn var(--t) var(--ease);
+  max-width: 900px; margin: 0 auto; animation: pageIn var(--t-page) var(--ease-ios);
 }
 .bottomnav {
   display: grid; grid-template-columns: repeat(5, 1fr);
   border-top: 1px solid var(--c-line);
-  background: rgba(8, 13, 24, 0.94); backdrop-filter: blur(14px);
+  background: rgba(8, 13, 24, 0.82);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
   padding-bottom: var(--safe-b); position: relative; z-index: 5;
 }
 .bottomnav button {
@@ -105,7 +106,10 @@ button:focus-visible, .chip:focus-visible, .item:focus-visible, .card.tap:focus-
   .page { padding-bottom: var(--sp-6); }
   .bottomnav { display: none; }
 }
-@keyframes pageIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes pageIn {
+  from { opacity: 0; transform: translate3d(14px, 0, 0) scale(0.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
 
 /* 卡片入场轻微错峰：只对首屏前几张生效，避免长列表一次性动画 */
 :root[data-motion="full"] .page > .col > *:nth-child(1) { animation: cardIn var(--t) var(--ease) both; }
@@ -146,11 +150,14 @@ button:focus-visible, .chip:focus-visible, .item:focus-visible, .card.tap:focus-
 /* ---------- 卡片 ---------- */
 .card {
   background: var(--c-glass); border: 1px solid var(--c-line); border-radius: var(--r-card);
-  padding: var(--sp-4); backdrop-filter: blur(10px); box-shadow: var(--shadow-1);
+  padding: var(--sp-4);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);   /* iOS/WKWebView 必须带 -webkit- 前缀，否则毛玻璃完全无效 */
+  box-shadow: var(--shadow-1);
 }
-.card.tap { cursor: pointer; transition: transform var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease); }
+/* 按下只做 transform/opacity/背景，绝不给列表元素加 box-shadow 过渡 */
+.card.tap { cursor: pointer; transition: transform var(--t-press) var(--ease-ios), border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease); }
 .card.tap:hover { border-color: var(--c-line-2); background: var(--c-glass-2); }
-.card.tap:active { transform: scale(0.985); }
+.card.tap:active { transform: scale(0.985); box-shadow: var(--shadow-3); }
 .card.mind { border-color: rgba(95, 227, 255, 0.24); box-shadow: 0 0 0 1px rgba(95, 227, 255, 0.06), var(--shadow-1); }
 .card.flat { background: rgba(16, 26, 45, 0.5); box-shadow: none; }
 .card-title { font-size: var(--fs-lg); font-weight: 600; letter-spacing: 0.02em; }
@@ -164,10 +171,10 @@ button:focus-visible, .chip:focus-visible, .item:focus-visible, .card.tap:focus-
   min-height: var(--touch); padding: 0 var(--sp-4); border-radius: var(--r-btn);
   border: 1px solid var(--c-line-2); background: var(--c-glass-2); color: var(--c-text);
   cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
-  transition: transform var(--t-fast) var(--ease), background var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease);
+  transition: transform var(--t-press) var(--ease-ios), background var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease);
 }
 .btn:hover { background: rgba(40, 60, 92, 0.7); }
-.btn:active { transform: scale(0.97); }
+.btn:active { transform: scale(0.96); }
 .btn.primary { background: linear-gradient(180deg, #3f83ff, #2f66d8); border-color: #5590ff; box-shadow: 0 6px 18px rgba(47, 102, 216, 0.35); font-weight: 600; }
 .btn.mind { background: linear-gradient(180deg, #2ea8c9, #1d7c99); border-color: #59d8f5; color: #eafcff; }
 .btn.danger { background: rgba(239, 106, 90, 0.14); border-color: rgba(239, 106, 90, 0.5); color: #ffc9c1; }
@@ -196,21 +203,23 @@ button:focus-visible, .chip:focus-visible, .item:focus-visible, .card.tap:focus-
 /* ---------- 弹层 ---------- */
 .layer { position: fixed; inset: 0; z-index: 40; pointer-events: none; }
 .layer.on { pointer-events: auto; }
-.scrim { position: absolute; inset: 0; background: rgba(4, 7, 13, 0.66); backdrop-filter: blur(3px); animation: fade var(--t) var(--ease); }
+.scrim { position: absolute; inset: 0; background: rgba(4, 7, 13, 0.66); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); animation: fade var(--t) var(--ease); }
 .sheet {
   position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
   width: min(680px, 100%); max-height: 86vh; max-height: 86dvh; overflow-y: auto;
-  background: linear-gradient(180deg, #131f34, #0b1220);
+  background: linear-gradient(180deg, rgba(19, 31, 52, 0.82), rgba(11, 18, 32, 0.9));
   border: 1px solid var(--c-line-2); border-radius: var(--r-sheet) var(--r-sheet) 0 0;
   padding: var(--sp-4) var(--sp-4) calc(var(--safe-b) + var(--sp-5));
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
   animation: sheetIn var(--t) var(--ease); box-shadow: var(--shadow-2);
 }
 .sheet::before { content: ""; display: block; width: 40px; height: 4px; border-radius: 4px; background: var(--c-line-2); margin: 0 auto var(--sp-3); }
 .modal {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   width: min(560px, calc(100% - 32px)); max-height: 84vh; max-height: 84dvh; overflow-y: auto;
-  background: linear-gradient(180deg, #131f34, #0b1220);
+  background: linear-gradient(180deg, rgba(19, 31, 52, 0.82), rgba(11, 18, 32, 0.9));
   border: 1px solid var(--c-line-2); border-radius: var(--r-sheet); padding: var(--sp-5);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
   animation: modalIn var(--t) var(--ease); box-shadow: var(--shadow-2);
 }
 @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
@@ -225,8 +234,9 @@ button:focus-visible, .chip:focus-visible, .item:focus-visible, .card.tap:focus-
   display: grid; gap: var(--sp-2); width: min(420px, calc(100% - 32px)); pointer-events: none;
 }
 .toast {
-  background: rgba(18, 28, 46, 0.96); border: 1px solid var(--c-line-2); border-left: 3px solid var(--c-primary);
-  border-radius: var(--r-btn); padding: var(--sp-3) var(--sp-4); box-shadow: var(--shadow-2);
+  background: rgba(18, 28, 46, 0.88); border: 1px solid var(--c-line-2); border-left: 3px solid var(--c-primary);
+  border-radius: var(--r-btn); padding: var(--sp-3) var(--sp-4); box-shadow: var(--shadow-3);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
   animation: toastIn var(--t) var(--ease); font-size: var(--fs-sm);
 }
 .toast.good { border-left-color: var(--c-good); }
@@ -250,6 +260,30 @@ button:focus-visible, .chip:focus-visible, .item:focus-visible, .card.tap:focus-
 .log-item .t { color: var(--c-dim); font-size: var(--fs-xs); margin-right: var(--sp-2); }
 .narrative { font-size: var(--fs-md); line-height: 1.9; color: var(--c-text); white-space: pre-wrap; }
 .narrative .em { color: var(--c-mind); }
+
+/* ---------- iOS 列表行（可选类，供后续接入；不改 .line / .item 语义） ---------- */
+/* 用法：<div class="rows"><button class="row-item">…<span class="chev"></span></button>…</div> */
+.rows {
+  display: grid; border-radius: var(--r-card); overflow: hidden;
+  background: var(--c-glass); border: 1px solid var(--c-line);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  box-shadow: var(--shadow-1);
+}
+/* 行间 1px 细分隔线，只在相邻行之间出现（与 iOS 分组列表一致） */
+.rows > .row-item + .row-item { border-top: 1px solid var(--c-line); }
+.row-item {
+  display: flex; align-items: center; gap: var(--sp-3);
+  width: 100%; min-height: var(--touch); padding: var(--sp-3) var(--sp-4);
+  background: none; border: 0; border-radius: 0; color: var(--c-text); text-align: left;
+  font: inherit; cursor: pointer;
+}
+/* 按下整行高亮，不缩放：行内可能有文字与数字，缩放会糊 */
+.row-item:active { background: var(--c-line); }
+.row-item[aria-current="true"], .row-item.on { background: var(--c-mind-soft); }
+.chev { margin-left: auto; flex: 0 0 auto; color: var(--c-dim); display: inline-flex; align-items: center; }
+/* chevron 用纯 CSS 画（不依赖字体图标）；JS 若自己塞了图标则自动让位 */
+.chev::after { content: ""; width: 7px; height: 7px; border-top: 1.5px solid currentColor; border-right: 1.5px solid currentColor; border-radius: 1px; transform: rotate(45deg); }
+.chev:not(:empty)::after { display: none; }
 
 /* ---------- Tabs ---------- */
 .tabs { display: flex; gap: var(--sp-1); overflow-x: auto; padding-bottom: var(--sp-2); }

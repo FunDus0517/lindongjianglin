@@ -29,6 +29,7 @@ import * as Base from '../src/systems/Base.js';
 import * as Market from '../src/systems/Market.js';
 import * as NPC from '../src/systems/NPC.js';
 import * as Survival from '../src/systems/Survival.js';
+import * as Death from '../src/systems/Death.js';
 import { applyOutcome, resolveChoice } from '../src/core/effects.js';
 
 const countCategory = Inventory.countCategory;
@@ -213,7 +214,7 @@ function Mind_powerBonus(state) {
  * 按需进食饮水治疗 → 有材料升级设施 → 白天外出搜集 → 入夜休息。
  * 这条测试同时验证内容连续性与基础数值平衡：合理的玩法不应在 M2 范围内被饿死或冻死。
  */
-test('全流程模拟：自动游玩第 1—30 天，第 31 天结算最终结局', () => {
+test('全流程模拟：自动游玩第 1—30 天，第 31 天进入无尽模式（不设固定结局）', () => {
   const s = Save.createState(20260913);
   Story.begin(s);
   Quest.refresh(s);
@@ -321,11 +322,30 @@ test('全流程模拟：自动游玩第 1—30 天，第 31 天结算最终结�
     GameTime.sleep(s);
   }
 
-  assert.ok(s.ending, `第 ${s.day} 天必须产出结局`);
-  assert.equal(s.ending.kind, 'final', `结局类型应为最终结局，实际 ${s.ending.id}`);
+  // 商业化升级：**不设置固定结局**。第 30 天不再是终点，而是给一份阶段总结后进入无尽模式，
+  // 所以这里断言"活着走到第 31 天且没有被强制收尾"，而不是断言拿到了某个 final 结局。
+  assert.equal(s.ending, null, `第 ${s.day} 天不该被强制结局（实际 ${s.ending?.id}）`);
   assert.ok(s.day > Story.CONTENT_DAYS, `应至少推进到第 31 天，实际第 ${s.day} 天`);
   assert.equal(s.milestone, 'M4', '第 31 天必须标记 M4 里程碑完成');
+  assert.equal(s.flags.endless, true, '第 31 天必须开启无尽模式');
+  assert.equal(s.reports.length, 1, '第 31 天必须留下 1 份阶段总结');
+  assert.ok(s.reports[0].title, '阶段总结必须带评价标题');
+  assert.ok(s.reports[0].desc, '阶段总结必须带描述');
   assert.ok(s.stats.hp > 0);
+
+  // 死亡不是结局：生命归零 → 倒地、丢失最近搜集的物资、原地复活继续玩
+  const doomed = Save.createState(20260913);
+  Story.begin(doomed);
+  Inventory.add(doomed, 'metal', 5);
+  Death.recordGain(doomed, { metal: 5 }, '模拟搜集');
+  const metalBefore = Inventory.count(doomed, 'metal');
+  doomed.stats.hp = 1;
+  doomed.stats.warmth = 0;
+  const res = GameTime.spend(doomed, 120, { indoor: false });
+  assert.equal(doomed.ending, null, '倒地不再是结局');
+  assert.equal(res.cause, 'ice', '冻死判定仍然存在');
+  assert.ok(doomed.stats.hp > 0, '倒地后必须还能继续玩');
+  assert.ok(Inventory.count(doomed, 'metal') < metalBefore, '倒地必须丢失最近搜集的物资');
 
   // 每个「含无条件剧情」的日期都必须真的触发过（条件分支被跳过是合法玩法）
   for (let day = 4; day <= Story.CONTENT_DAYS; day++) {
@@ -336,5 +356,6 @@ test('全流程模拟：自动游玩第 1—30 天，第 31 天结算最终结�
   }
   assert.ok(s.quests.q_survive_30, '第 30 天的生存任务必须已发放');
   assert.ok(Object.keys(s.flags).length > 20, '整局应产生足量的剧情 Flag');
-  console.log(`[模拟] 结局 ${s.ending.title}（第 ${s.ending.day} 天）｜生命 ${Math.round(s.stats.hp)}｜体温 ${Math.round(s.stats.warmth)}｜精神 ${Math.round(s.stats.mind)}｜战力 ${s.power}｜基地 ${Object.values(s.base).reduce((a, b) => a + b, 0)}｜互助 ${s.aid.members}｜事件 ${seen.size}`);
+  const rep = s.reports[s.reports.length - 1];
+  console.log(`[模拟] 第 ${s.day} 天仍在继续｜当前评价 ${rep.title}｜生命 ${Math.round(s.stats.hp)}｜体温 ${Math.round(s.stats.warmth)}｜精神 ${Math.round(s.stats.mind)}｜战力 ${s.power}｜基地 ${Object.values(s.base).reduce((a, b) => a + b, 0)}｜互助 ${s.aid.members}｜事件 ${seen.size}`);
 });

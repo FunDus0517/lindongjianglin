@@ -8,8 +8,8 @@ import { btn, card, empty, progress, sectionTitle, sheet, tag } from '../ui/comp
 import * as Inventory from '../systems/Inventory.js';
 import * as NPC from '../systems/NPC.js';
 
-const KIND_LABEL = { favor: '好感度', trust: '信任度', loyalty: '忠诚度', stress: '压力值' };
-const KIND_CLS = { favor: 'energy', trust: 'mind', loyalty: 'warm', stress: 'hp' };
+const KIND_LABEL = { favor: '好感度', trust: '信任度', loyalty: '忠诚度', stress: '压力值', conflict: '冲突' };
+const KIND_CLS = { favor: 'energy', trust: 'mind', loyalty: 'warm', stress: 'hp', conflict: 'hunger' };
 
 function openNpc(ctx, id) {
   const state = ctx.state;
@@ -25,7 +25,7 @@ function openNpc(ctx, id) {
       h('div', { class: 'col' },
         h('div', { class: 'row wrap', style: { gap: '6px' } },
           c.tags.map((t) => tag(t)),
-          tag(NPC.bandLabel(id, r.favor + r.trust * 0.5), r.favor >= 25 ? 'good' : ''),
+          tag(NPC.relationBand(state, id), (r.conflict ?? 0) >= NPC.CONFLICT_REFUSE ? 'bad' : r.favor >= 25 ? 'good' : ''),
           inAid ? tag('互助成员', 'mind') : null),
         h('div', { class: 'narrative small' }, c.desc),
         line ? h('div', { class: 'line' }, h('span', { class: 'ic' }, '💬'), h('div', { class: 'grow small' }, line)) : null,
@@ -90,10 +90,11 @@ export function CharactersPage(ctx) {
           h('div', { class: 'grow' },
             h('div', { class: 'row between' },
               h('span', { class: 'strong small' }, c.name),
-              tag(r.met ? NPC.bandLabel(c.id, r.favor + r.trust * 0.5) : '尚未接触', r.favor >= 25 ? 'good' : '')),
+              tag(r.met ? NPC.relationBand(state, c.id) : '尚未接触', (r.conflict ?? 0) >= NPC.CONFLICT_REFUSE ? 'bad' : r.favor >= 25 ? 'good' : '')),
             h('div', { class: 'row wrap', style: { gap: '4px', marginTop: '2px' } },
               tag(`好感 ${r.favor}`, r.favor >= 25 ? 'good' : ''),
               r.stress > 60 ? tag('压力高', 'bad') : null,
+              (r.conflict ?? 0) > 0 ? tag(`冲突 ${r.conflict}`, (r.conflict ?? 0) >= NPC.CONFLICT_REFUSE ? 'bad' : 'warn') : null,
               inAid ? tag('互助成员', 'mind') : null,
               h('span', { class: 'xs muted' }, c.title))),
           h('span', { class: 'xs muted' }, '›'));
@@ -102,7 +103,9 @@ export function CharactersPage(ctx) {
     card([
       sectionTitle('关系说明'),
       h('div', { class: 'small muted' },
-        '好感度决定对方是否愿意与你合作；信任度决定他是否会透露关键信息；忠诚度决定危机时是否站在你这边；压力值过高会触发失控事件。'),
+        '好感度决定对方是否愿意与你合作；信任度决定他是否会透露关键信息；忠诚度决定危机时是否站在你这边；'
+        + `压力值过高会触发失控事件；冲突值会自己长（长期高压 + 低好感），到 ${NPC.CONFLICT_REFUSE} 就不理你了，`
+        + `到 ${NPC.CONFLICT_LEAVE} 会退出互助体系。赠予物资可以压冲突。`),
     ], { cls: 'flat' }),
   );
 }
