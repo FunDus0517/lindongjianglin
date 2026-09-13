@@ -26,3 +26,5 @@ ios/build/
 ios/Payload/
 ios/*.ipa
 ios/DerivedData/
+# 内置站点：构建前由 workflow 从仓库复制进来，避免重复入库
+ios/www/

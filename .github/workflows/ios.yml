@@ -23,6 +23,14 @@ jobs:
       - name: 安装 XcodeGen
         run: brew install xcodegen
 
+      - name: 把站点内容打进 App（离线可玩的基础）
+        run: |
+          rm -rf ios/www
+          mkdir -p ios/www
+          cp index.html manifest.webmanifest icon.svg ios/www/
+          cp -R src ios/www/src
+          echo "bundled files: $(find ios/www -type f | wc -l)"
+
       - name: 生成 Xcode 工程
         working-directory: ios
         run: xcodegen generate

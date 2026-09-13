@@ -10,8 +10,8 @@ options:
 
 settings:
   base:
-    MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: "1"
+    MARKETING_VERSION: "1.1.0"
+    CURRENT_PROJECT_VERSION: "2"
     SWIFT_VERSION: "5.0"
     # 这个包是给第三方签名服务（全能签等）重新签名的，构建阶段一律不签名
     CODE_SIGNING_ALLOWED: "NO"
@@ -28,6 +28,10 @@ targets:
           # Info.plist 由 INFOPLIST_FILE 处理；若同时进资源阶段，
           # Xcode 会因产物重名（Multiple commands produce Info.plist）而编译失败
           - Info.plist
+      # 内置站点：构建前由 workflow 从仓库复制进 ios/www（不入库），
+      # 作为文件夹引用原样打进 App bundle —— 首次运行复制到沙盒，实现断网可玩。
+      - path: www
+        type: folder
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.fundus.winterfall

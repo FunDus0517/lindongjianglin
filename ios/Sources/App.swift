@@ -1,17 +1,20 @@
 // 《凛冬降临》iOS 外壳
 //
-// 设计取舍：游戏内容放在服务器上（http://59.153.167.60:8080/），App 只做一件事——
-// 全屏、无浏览器界面的打开它。好处是内容更新只要改服务器，永远不用重新出包、重新签名。
-// 代价是需要联网；断网时给一个能重试的提示页，而不是白屏。
+// 加载顺序（每一步失败都往后退一层，绝不留白屏）：
+//   1. 沙盒里的本机站点（http://127.0.0.1:8731，断网也能玩，localStorage 存档稳定）
+//   2. 服务器上的在线站点（Content.remoteBase）
+//   3. 一张能重试的离线提示页
+//
+// 内容更新：本机模式下每次启动在后台拉一次 site-bundle.json，版本变了就整包替换并重载 ——
+// 改游戏内容只改服务器，不用重新编译、不用重新签名、不用重装。
 import UIKit
 import WebKit
-
-/// 游戏内容地址。换域名/换服务器就改这一行。
-private let siteURL = URL(string: "http://59.153.167.60:8080/")!
 
 final class GameViewController: UIViewController, WKNavigationDelegate {
 
     private var webView: WKWebView!
+    private var server: LocalServer?
+    private var usingLocal = false
 
     override func loadView() {
         let config = WKWebViewConfiguration()
@@ -33,25 +36,78 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        loadSite()
+        start()
     }
 
     override var preferredStatusBarStyle: UIStatusBarStyle { .lightContent }
 
-    private func loadSite() {
-        var request = URLRequest(url: siteURL)
+    // MARK: - 启动顺序
+
+    private func start() {
+        guard Content.ensureSeed() else {
+            load(Content.remoteBase, local: false)
+            return
+        }
+        let server = LocalServer(root: Content.root)
+        guard server.start() else {
+            // 端口被占或监听失败：直接用在线站点，行为与升级前一致
+            load(Content.remoteBase, local: false)
+            return
+        }
+        self.server = server
+
+        let localURL = URL(string: "http://127.0.0.1:\(LocalServer.port)/index.html")!
+        var probe = URLRequest(url: localURL)
+        probe.timeoutInterval = 6
+        probe.cachePolicy = .reloadIgnoringLocalCacheData
+        URLSession.shared.dataTask(with: probe) { [weak self] data, response, error in
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let ok = error == nil && status == 200 && (data?.count ?? 0) > 200
+            DispatchQueue.main.async {
+                // 探针确认本机服务真的能给出首页，才切到本机模式
+                self?.load(ok ? localURL : Content.remoteBase, local: ok)
+            }
+        }.resume()
+    }
+
+    private func load(_ url: URL, local: Bool) {
+        usingLocal = local
+        var request = URLRequest(url: url)
         request.timeoutInterval = 20
         request.cachePolicy = .reloadRevalidatingCacheData
         webView.load(request)
+        checkForUpdate()
+    }
+
+    /// 后台检查内容版本；本机模式下有新版本就重载页面。
+    private func checkForUpdate() {
+        Content.updateIfNeeded { [weak self] changed in
+            guard changed else { return }
+            DispatchQueue.main.async {
+                guard let self = self, self.usingLocal else { return }
+                self.webView.reload()
+            }
+        }
     }
 
     // MARK: - WKNavigationDelegate
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        showOfflineNotice()
+        recover()
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        recover()
+    }
+
+    /// 本机失败就退到在线，在线失败才显示提示页。
+    private func recover() {
+        if usingLocal {
+            usingLocal = false
+            load(Content.remoteBase, local: false)
+            return
+        }
+        server?.stop()
         showOfflineNotice()
     }
 
@@ -68,14 +124,14 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
           .box{max-width:20em;padding:24px;text-align:center}
           h1{font-size:19px;margin:0 0 10px;font-weight:600}
           p{color:#8a97ad;font-size:14px;margin:0 0 22px}
-          button{-webkit-appearance:none;border:0;border-radius:10px;background:#2f6df6;color:#fff;
+          button{-webkit-appearance:none;border:0;border-radius:16px;background:#2f6df6;color:#fff;
             font-size:16px;font-weight:600;padding:14px 0;width:100%}
           code{color:#5d6a80;font-size:11px;word-break:break-all}
         </style></head><body><div class="box">
           <h1>连不上服务器</h1>
-          <p>游戏内容在服务器上，需要联网才能打开。<br>检查网络后重试。</p>
-          <button onclick="location.href='\(siteURL.absoluteString)'">重试</button>
-          <p style="margin-top:18px"><code>\(siteURL.absoluteString)</code></p>
+          <p>本机副本没有就绪，服务器也暂时联系不上。<br>检查网络后重试。</p>
+          <button onclick="location.href='\(Content.remoteBase.absoluteString)'">重试</button>
+          <p style="margin-top:18px"><code>\(Content.remoteBase.absoluteString)</code></p>
         </div></body></html>
         """
         webView.loadHTMLString(html, baseURL: nil)
