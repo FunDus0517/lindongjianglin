@@ -70,9 +70,5 @@ jobs:
         working-directory: ios
         run: |
           gh release delete latest-ipa --yes --cleanup-tag || true
-          gh release create latest-ipa Winterfall.ipa \
-            --title "未签名 IPA（最新构建）" \
-            --notes "下载后丢进全能签签名安装即可。
-
-App 内容从服务器云端加载，改游戏内容不需要重新出这个包。"
+          gh release create latest-ipa Winterfall.ipa --title "未签名 IPA（最新构建）" --notes "未签名 IPA，下载后丢进全能签签名安装。App 内容从服务器云端加载，改游戏内容不需要重新出包。"
           echo "下载地址：https://github.com/${{ github.repository }}/releases/download/latest-ipa/Winterfall.ipa"
