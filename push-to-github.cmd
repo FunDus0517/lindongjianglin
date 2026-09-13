@@ -2,32 +2,41 @@
 chcp 65001 >nul
 cd /d "%~dp0"
 echo.
-echo   把《凛冬降临》推送到 GitHub
+echo   把《凛冬降临》推送到 GitHub（FunDus0517/lindongjianglin）
 echo.
-echo   先做一件事：打开 https://github.com/new 新建一个**空仓库**
-echo   （不要勾选 Add a README / .gitignore / license），
-echo   然后复制它的地址，形如 https://github.com/你的用户名/winterfall.git
+echo   首次运行会弹出浏览器，请登录 GitHub 并点授权；之后这台机器就记住了。
+echo   如果连接失败，多试几次（本机到 GitHub 的网络目前不稳定），或先打开你的代理再运行。
 echo.
-set /p REPO=粘贴仓库地址后回车: 
-if "%REPO%"=="" echo 没有输入地址，已取消。 & pause & exit /b 1
+pause
+
+set PATH=C:\Program Files\Git\cmd;%PATH%
+git remote remove origin >nul 2>nul
+git remote add origin https://github.com/FunDus0517/lindongjianglin.git
+git branch -M main
 
 echo.
-echo   正在推送... 如果弹出浏览器要求登录 GitHub，登录并授权即可。
-git remote remove origin >nul 2>nul
-git remote add origin %REPO%
-git branch -M main
+echo   [1/2] 推送代码...
 git push -u origin main
-if errorlevel 1 (
-  echo.
-  echo   推送失败。常见原因：
-  echo     - 仓库地址写错，或仓库还没创建
-  echo     - 没有登录 GitHub：重新运行本脚本，在弹出的浏览器里完成授权
-  echo.
-) else (
-  echo.
-  echo   推送成功。接下来在 GitHub 仓库的 Settings -^> Pages 里，
-  echo   把 Source 选成 "GitHub Actions"，等一分钟就有公网地址了：
-  echo   https://你的用户名.github.io/仓库名/
-  echo.
-)
+if errorlevel 1 goto fail
+
+echo.
+echo   [2/2] 完成。
+echo.
+echo   接下来在浏览器里做两件事：
+echo     1. 打开 https://github.com/FunDus0517/lindongjianglin/settings/pages
+echo     2. Source 选 "GitHub Actions"，等一分钟
+echo   之后公网地址（手机可随时打开、可加到主屏幕）：
+echo     https://fundus0517.github.io/lindongjianglin/
+echo.
 pause
+exit /b 0
+
+:fail
+echo.
+echo   推送失败。请检查：
+echo     - 仓库是否已经创建：https://github.com/new  （名字填 lindongjianglin，不要勾任何初始化选项）
+echo     - 浏览器授权是否完成（重新运行本脚本会再次弹出）
+echo     - 网络：本机到 github.com 时通时断，重试一两次通常就好
+echo.
+pause
+exit /b 1
