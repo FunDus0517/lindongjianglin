@@ -18,3 +18,11 @@ tools/_*.mjs
 # 本地环境
 .env
 .env.local
+
+# iOS：.xcodeproj 由 XcodeGen 从 ios/project.yml 生成，不入库
+ios/*.xcodeproj/
+ios/*.xcworkspace/
+ios/build/
+ios/Payload/
+ios/*.ipa
+ios/DerivedData/

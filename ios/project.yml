@@ -1,0 +1,44 @@
+# XcodeGen 工程描述：https://github.com/yonaskolb/XcodeGen
+# 用 `xcodegen generate` 生成 Winterfall.xcodeproj（.xcodeproj 不入库，避免手写 pbxproj）
+name: Winterfall
+
+options:
+  bundleIdPrefix: com.fundus
+  deploymentTarget:
+    iOS: "15.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.0"
+    # 这个包是给第三方签名服务（全能签等）重新签名的，构建阶段一律不签名
+    CODE_SIGNING_ALLOWED: "NO"
+    CODE_SIGNING_REQUIRED: "NO"
+    CODE_SIGN_IDENTITY: ""
+
+targets:
+  Winterfall:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.fundus.winterfall
+        PRODUCT_NAME: Winterfall
+        INFOPLIST_FILE: Sources/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        TARGETED_DEVICE_FAMILY: "1,2"     # iPhone + iPad
+        SUPPORTS_MACCATALYST: "NO"
+
+schemes:
+  Winterfall:
+    build:
+      targets:
+        Winterfall: all
+    run:
+      config: Release
+    archive:
+      config: Release

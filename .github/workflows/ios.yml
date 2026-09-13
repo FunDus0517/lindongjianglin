@@ -1,0 +1,78 @@
+name: iOS 未签名 IPA
+
+# 只在 iOS 工程本身变动时编译。
+# 网页内容改了不需要重新出包 —— App 打开时直接读服务器，改完即生效。
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'ios/**'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ipa:
+    name: 编译未签名 IPA
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 XcodeGen
+        run: brew install xcodegen
+
+      - name: 生成 Xcode 工程
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: 编译（不签名）
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Winterfall.xcodeproj \
+            -scheme Winterfall \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: 打包成 IPA
+        working-directory: ios
+        run: |
+          APP="build/Build/Products/Release-iphoneos/Winterfall.app"
+          if [ ! -d "$APP" ]; then echo "编译产物不存在: $APP"; exit 1; fi
+          echo "Bundle ID : $(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$APP/Info.plist")"
+          echo "显示名称  : $(/usr/libexec/PlistBuddy -c 'Print :CFBundleDisplayName' "$APP/Info.plist")"
+          rm -rf Payload Winterfall.ipa
+          mkdir -p Payload
+          cp -R "$APP" Payload/
+          zip -qry Winterfall.ipa Payload
+          ls -lh Winterfall.ipa
+          unzip -l Winterfall.ipa | head -20
+
+      - name: 上传构建产物（需登录 GitHub 才能下载）
+        uses: actions/upload-artifact@v4
+        with:
+          name: Winterfall-unsigned-ipa
+          path: ios/Winterfall.ipa
+          if-no-files-found: error
+
+      - name: 发布到 Releases（公网永久链接，手机直接下）
+        env:
+          GH_TOKEN: ${{ github.token }}
+        working-directory: ios
+        run: |
+          gh release delete latest-ipa --yes --cleanup-tag || true
+          gh release create latest-ipa Winterfall.ipa \
+            --title "未签名 IPA（最新构建）" \
+            --notes "下载后丢进全能签签名安装即可。
+
+App 内容从服务器云端加载，改游戏内容不需要重新出这个包。"
+          echo "下载地址：https://github.com/${{ github.repository }}/releases/download/latest-ipa/Winterfall.ipa"
