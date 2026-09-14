@@ -652,3 +652,32 @@ test('按需加载：首屏只加载首页模块，切页后其余页面才按�
   assert.equal(router.current().name, 'game');
   assert.match(app.allText, /生存状态|今日任务/, '切回主页必须立即渲染（模块已缓存）');
 });
+
+test('UI：基地视觉化（V11）—— 建筑格显示等级刻度与状态，HUD 给出基地全貌', () => {
+  const state = richState();
+  state.day = 12;
+  state.base = { shelter: 3, storage: 2, heating: 10, power: 2, greenhouse: 3, medical: 0, defense: 5, workshop: 1, research: 0, housing: 0 };
+  state.inventory = { wood: 20, metal: 20, parts: 10, insulation: 10, fuel: 3 };
+  const { ctx } = makeCtx(state);
+  const page = pages.Base(ctx);
+  const text = page.allText;
+
+  assert.match(text, /基地地图/, '必须有基地地图区块');
+  assert.match(text, /基地形态|临时营地|木屋基地|地下避难所|钢铁堡垒|地下城市/, 'HUD 必须说明基地形态');
+
+  // 每处设施一格，格子里有 10 格刻度，点亮数等于当前等级
+  const names = Base.FACILITIES.map((f) => f.name);
+  const cards = [...page.walk()].filter((n) => (n.className ?? '').split(/\s+/).includes('building'));
+  assert.equal(cards.length, Base.FACILITIES.length, `建筑格数量应等于设施数量，实际 ${cards.length}`);
+  for (const card of cards) {
+    const pips = [...card.walk()].filter((n) => (n.className ?? '') === 'on');
+    const name = names.find((n) => card.allText.includes(n));
+    const lv = Base.level(state, Base.FACILITIES.find((f) => f.name === name).id);
+    assert.equal(pips.length, lv, `${name} 的刻度点亮数应等于等级 ${lv}，实际 ${pips.length}`);
+  }
+
+  // 状态标签：未建成 / 满级 / 生产提示
+  assert.match(text, /未建成/, '未建的设施必须标出来');
+  assert.match(text, /满级/, '满级设施必须标出来');
+  assert.match(text, /每日 \+3 食物/, '温室必须显示每日产出');
+});

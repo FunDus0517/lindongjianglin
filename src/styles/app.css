@@ -336,6 +336,44 @@ input.search { width: 100%; min-height: var(--touch); padding: 0 var(--sp-4); bo
 }
 .main { position: relative; z-index: 1; }
 
+/* ---------- 基地视觉化（V3.0 §十 · V11 基地视觉化） ----------
+   不引入图片：建筑格是纯 DOM + CSS，配上等级刻度与状态标签，
+   入场用一段错开的 transform 动画（GPU 合成），点击有按压缩放反馈。 */
+.hud-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.hud-cell { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.hud-cell .strong { font-size: var(--fs-sm); }
+
+.base-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.building {
+  flex-direction: column; align-items: stretch; gap: 4px;
+  padding: 12px; border-radius: var(--r-card, 20px);
+  animation: buildingIn 320ms var(--ease) both;
+  transition: transform 140ms var(--ease), box-shadow 140ms var(--ease);
+}
+.building:active { transform: scale(0.975); }
+.building.off { opacity: 0.62; }
+.building.maxed { box-shadow: 0 0 0 1px rgba(124, 227, 168, 0.25) inset; }
+.building-icon { font-size: 22px; line-height: 1; }
+.building-name { font-size: var(--fs-sm); font-weight: 600; }
+.building-effect { min-height: 2.4em; line-height: 1.25; }
+@keyframes buildingIn {
+  from { opacity: 0; transform: translate3d(0, 8px, 0) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+
+/* 等级刻度：10 个小方块，比进度条更适合一眼扫 */
+.pips { display: flex; gap: 3px; }
+.pips i {
+  flex: 1; height: 4px; border-radius: 2px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.pips i.on { background: linear-gradient(90deg, #4e8dfb, #7ce3a8); }
+
+@media (min-width: 520px) {
+  .base-grid { grid-template-columns: repeat(3, 1fr); }
+  .hud-grid { grid-template-columns: repeat(6, 1fr); }
+}
+
 /* ---------- 爽感反馈（V3.0 策划案 §十一） ----------
    事件正文渐显 + 资源数字飘出更"弹"。只动 transform / opacity，
    并且同样受两套 reduced-motion 规则约束。 */

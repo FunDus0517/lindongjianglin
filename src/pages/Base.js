@@ -1,6 +1,9 @@
 /**
- * 基地与设施管理页（项目书 §10、附录C 基地/设施管理页）。
- * 设施等级制、升级消耗与效果预览、加工设施配方。
+ * 基地页（V3.0 策划案 §五、§十 · V11 基地视觉化）。
+ *
+ * 视觉化做法：不引入图片资源，用 DOM + CSS 把八到十处设施画成**可点的建筑格**，
+ * 每格显示等级刻度、供电/停摆状态、当前效果与升级耗时；点开仍是设施详情 Sheet。
+ * 契约保持不变：每处设施一行 `.item`、可点、文案完整（UI 与审计测试都依赖它）。
  * @module pages/Base
  */
 import { h } from '../core/dom.js';
@@ -19,6 +22,21 @@ const techCostText = (cost) => {
   return parts.join('、') || '免费';
 };
 
+/** 等级刻度：用方块表示 10 级，手机上比进度条更直观。 */
+const pips = (lv, max) => h('div', { class: 'pips' },
+  Array.from({ length: Math.min(max, 10) }, (_, i) =>
+    h('i', { class: i < lv ? 'on' : '' })));
+
+/** 建筑状态：停摆 / 满级 / 在产 / 可用。 */
+function facilityStatus(state, f, lv) {
+  if (lv >= f.max) return { text: '满级', kind: 'good' };
+  if (f.id === 'power' && lv > 0 && state.flags.energy_ok === false) return { text: '燃油耗尽', kind: 'bad' };
+  if (f.id === 'heating' && lv > 0) return { text: `每日耗燃料 ${lv}`, kind: '' };
+  if (f.id === 'greenhouse' && lv > 0) return { text: `每日 +${lv} 食物`, kind: 'good' };
+  if (lv === 0) return { text: '未建成', kind: '' };
+  return { text: `Lv.${lv}`, kind: 'mind' };
+}
+
 export function BasePage(ctx) {
   const state = ctx.state;
   const total = Base.totalLevels(state);
@@ -27,50 +45,55 @@ export function BasePage(ctx) {
   const form = Base.form(state);
   const nextForm = Base.nextForm(state);
   const tech = Tech.view(state);
+  const built = Base.FACILITIES.filter((f) => Base.level(state, f.id) > 0).length;
 
-  return h('div', { class: 'col' },
-    // 基地形态（无限生存方案 §四：木屋 → 地下避难所 → 钢铁堡垒 → 大型地下城市）
+  return h('div', { class: 'col base-v4' },
+    // ── 基地 HUD（V11：一屏看清基地现在什么样）
     card([
       h('div', { class: 'row between' },
-        h('span', { class: 'strong' }, `${form.icon} ${form.name}`),
-        tag(`科技 Lv.${Tech.totalLevels(state)}`, 'mind')),
-      h('div', { class: 'small muted', style: { marginTop: '6px' } }, form.desc),
+        h('div', { class: 'row', style: { gap: '8px' } },
+          h('span', { class: 'strong' }, `${form.icon} ${form.name}`),
+          tag(`科技 Lv.${Tech.totalLevels(state)}`, 'mind')),
+        tag(`今日升级次数 ${left} / ${Base.DAILY_UPGRADE_LIMIT} 次`, left > 0 ? 'good' : 'warn')),
+      h('div', { class: 'hud-grid', style: { marginTop: '10px' } },
+        h('div', { class: 'hud-cell' }, h('span', { class: 'xs muted' }, '设施'), h('span', { class: 'strong' }, `${built} / ${Base.FACILITIES.length}`)),
+        h('div', { class: 'hud-cell' }, h('span', { class: 'xs muted' }, '等级合计'), h('span', { class: 'strong' }, `${total} / ${Base.FACILITIES.length * Base.MAX_LEVEL}`)),
+        h('div', { class: 'hud-cell' }, h('span', { class: 'xs muted' }, '室内保温'), h('span', { class: 'strong' }, `+${Math.round(Base.indoorWarmth(state))}℃`)),
+        h('div', { class: 'hud-cell' }, h('span', { class: 'xs muted' }, '遇敌削减'), h('span', { class: 'strong' }, `${Math.round((1 - Base.defenseMod(state)) * 100)}%`)),
+        h('div', { class: 'hud-cell' }, h('span', { class: 'xs muted' }, '仓库'), h('span', { class: 'strong' }, `${Inventory.used(state)} / ${Inventory.capacity(state)}`)),
+        h('div', { class: 'hud-cell' }, h('span', { class: 'xs muted' }, '电力'), h('span', { class: 'strong', style: { color: state.base.power > 0 && state.flags.energy_ok === false ? 'var(--c-bad)' : '' } }, state.base.power === 0 ? '未建成' : state.flags.energy_ok === false ? '停摆' : '正常'))),
+      h('div', { class: 'xs muted', style: { marginTop: '8px' } }, form.desc),
       nextForm
-        ? h('div', { class: 'xs muted', style: { marginTop: '8px' } },
-          `下一个形态「${nextForm.icon} ${nextForm.name}」要求：${nextForm.hint ?? ''}${nextForm.gap?.levels ? `（设施等级还差 ${nextForm.gap.levels}）` : ''}`)
-        : h('div', { class: 'xs', style: { marginTop: '8px', color: 'var(--c-good)' } }, '已经是最高形态。文明还在。'),
+        ? h('div', { class: 'xs muted', style: { marginTop: '4px' } }, `下一个形态「${nextForm.icon} ${nextForm.name}」：${nextForm.hint ?? ''}${nextForm.gap?.levels ? `（还差 ${nextForm.gap.levels} 级）` : ''}`)
+        : h('div', { class: 'xs', style: { marginTop: '4px', color: 'var(--c-good)' } }, '已经是最高形态。文明还在。'),
     ], { cls: 'mind' }),
 
-    card([
+    // ── 基地地图（V11：建筑可视化，点建筑开详情）
+    sectionTitle('基地地图', h('span', { class: 'xs muted' }, `点建筑升级 · 上限 ${Base.MAX_LEVEL} 级`)),
+    h('div', { class: 'base-grid' }, Base.FACILITIES.map((f, i) => {
+      const lv = Base.level(state, f.id);
+      const cost = Base.upgradeCost(state, f.id);
+      const maxed = lv >= f.max;
+      const st = facilityStatus(state, f, lv);
+      return h('div', {
+        class: ['item', 'building', lv === 0 ? 'off' : '', maxed ? 'maxed' : ''],
+        role: 'button',
+        tabindex: '0',
+        style: { animationDelay: `${Math.min(i * 40, 320)}ms` },
+        onClick: () => openFacility(ctx, f.id),
+      },
       h('div', { class: 'row between' },
-        h('span', { class: 'strong' }, '地下基地'),
-        tag(`设施等级合计 ${total}`, 'mind')),
-      h('div', { class: 'row between', style: { marginTop: '8px' } },
-        h('span', { class: 'small strong' }, '今日升级次数'),
-        tag(`${left} / ${Base.DAILY_UPGRADE_LIMIT} 次`, left > 0 ? 'good' : 'warn')),
-      h('div', { class: 'xs muted', style: { marginTop: '4px' } },
-        `每天 06:00 刷新，最多升级 ${Base.DAILY_UPGRADE_LIMIT} 处设施；每次升级都要花时间和材料，所以“今天先升哪个”是个真实选择。`),
+        h('span', { class: 'building-icon' }, f.icon),
+        tag(st.text, st.kind)),
+      h('div', { class: 'building-name' }, f.name),
+      pips(lv, f.max),
+      h('div', { class: 'xs muted building-effect' }, lv > 0 ? f.effect(lv) : '还没建'),
+      h('div', { class: 'row between', style: { marginTop: '6px' } },
+        h('span', { class: 'xs muted' }, `Lv.${lv} / ${f.max}`),
+        h('span', { class: 'xs muted' }, maxed ? '已满级' : `${cost.minutes} 分 ›`)));
+    })),
 
-      // 八处设施等级速览：手机上不用滚八张卡片也能看清现状
-      h('div', { class: 'grid three', style: { marginTop: '10px' } },
-        Base.FACILITIES.map((f) => h('div', { class: 'line', onClick: () => ctx.refresh() },
-          h('span', { class: 'ic' }, f.icon),
-          h('div', { class: 'grow' },
-            h('div', { class: 'xs muted' }, f.name),
-            h('div', { class: 'strong' }, `Lv.${Base.level(state, f.id)}`))))),
-
-      h('div', { class: 'col', style: { gap: '4px', marginTop: '10px' } },
-        h('div', { class: 'row between' }, h('span', { class: 'xs muted' }, '仓库容量'), h('span', { class: 'xs' }, `${Inventory.used(state)} / ${Inventory.capacity(state)}`)),
-        h('div', { class: 'row between' }, h('span', { class: 'xs muted' }, '室内保温加成'), h('span', { class: 'xs' }, `+${Math.round(Base.indoorWarmth(state))}℃（供暖 ${Base.level(state, 'heating')} + 住所 ${Base.level(state, 'shelter')}）`)),
-        h('div', { class: 'row between' }, h('span', { class: 'xs muted' }, '遇敌风险削减'), h('span', { class: 'xs' }, `${Math.round((1 - Base.defenseMod(state)) * 100)}%`)),
-        h('div', { class: 'row between' }, h('span', { class: 'xs muted' }, '每日温室产出'), h('span', { class: 'xs' }, `${Base.level(state, 'greenhouse')} 份`)),
-        h('div', { class: 'row between' }, h('span', { class: 'xs muted' }, '每日供暖消耗'), h('span', { class: 'xs' }, Base.level(state, 'heating') > 0 ? `燃料 ${Base.level(state, 'heating')} 份` : '无')),
-        h('div', { class: 'row between' }, h('span', { class: 'xs muted' }, '能源状态'), h('span', { class: 'xs', style: { color: state.base.power > 0 && state.flags.energy_ok === false ? 'var(--c-bad)' : '' } }, state.base.power === 0 ? '未建成' : state.flags.energy_ok === false ? '燃油耗尽：加成失效' : `正常（每日消耗燃油 ${state.base.power} 份）`)),
-        h('div', { class: 'row between' }, h('span', { class: 'xs muted' }, '互助体系产出'), h('span', { class: 'xs' }, `食物 +${state.aid?.members ?? 0}${(state.aid?.members ?? 0) >= 2 ? `、净水 +${Math.floor((state.aid?.members ?? 0) / 2)}` : ''}`))),
-      h('div', { class: 'btn-group', style: { marginTop: '10px' } },
-        btn('人物与互助', { kind: 'ghost', sm: true, onClick: () => ctx.go('characters') })),
-    ], { cls: 'mind' }),
-
+    // ── 科技（V3.0 §四）
     sectionTitle('科技', h('span', { class: 'xs muted' }, `晶核 ${state.cores} · 蓝图 ${Inventory.count(state, 'blueprint')}`)),
     h('div', { class: 'col' }, tech.map((line) => h('div', { class: 'line' },
       h('span', { class: 'ic', style: { fontSize: '18px' } }, line.icon),
@@ -89,21 +112,7 @@ export function BasePage(ctx) {
           onClick: (e) => { e.stopPropagation(); ctx.apply(Tech.research(state, line.id)); },
         })))),
 
-    sectionTitle('设施', h('span', { class: 'xs muted' }, `上限 ${Base.MAX_LEVEL} 级 · 点开升级`)),
-    h('div', { class: 'col' }, Base.FACILITIES.map((f) => {
-      const lv = Base.level(state, f.id);
-      const cost = Base.upgradeCost(state, f.id);
-      const maxed = lv >= f.max;
-      return h('div', { class: 'item', role: 'button', tabindex: '0', onClick: () => openFacility(ctx, f.id) },
-        h('span', { class: 'ic', style: { fontSize: '18px' } }, f.icon),
-        h('div', { class: 'grow' },
-          h('div', { class: 'row between' },
-            h('span', { class: 'strong small' }, f.name),
-            h('span', { class: 'xs muted' }, `Lv.${lv} / ${f.max}`)),
-          h('div', { style: { marginTop: '4px' } }, progress(lv, f.max, { cls: 'mind' }))),
-        maxed ? tag('满级', 'good') : h('span', { class: 'xs muted' }, `${cost.minutes}分 ›`));
-    })),
-
+    // ── 加工设施
     sectionTitle('加工设施', h('span', { class: 'xs muted' }, `已解锁 ${recipes.length}/${Base.RECIPES_COUNT}`)),
     recipes.length === 0
       ? empty('升级加工设施后可解锁配方。')
@@ -121,10 +130,18 @@ export function BasePage(ctx) {
             onClick: (e) => { e.stopPropagation(); ctx.apply(Base.craft(state, r.id)); },
           }));
       })),
+
+    card([
+      h('div', { class: 'small muted' },
+        `每天 06:00 刷新升级额度（${Base.DAILY_UPGRADE_LIMIT} 次），每次升级都要花时间和材料 —— "今天先升哪个"是真实取舍。\n供暖 ${Base.level(state, 'heating')} 级每日消耗燃料 ${Base.level(state, 'heating')} 份；能源 ${Base.level(state, 'power')} 级每日消耗燃油 ${Base.level(state, 'power')} 份（能源科技可打折）。`),
+      h('div', { class: 'btn-group', style: { marginTop: '10px' } },
+        btn('人物与排班', { kind: 'ghost', sm: true, onClick: () => ctx.go('characters') }),
+        btn('科技细节', { kind: 'ghost', sm: true, onClick: () => ctx.go('mind') })),
+    ], { cls: 'flat' }),
   );
 }
 
-/** 设施详情放在底部 Sheet 里，列表才能保持一屏能看完。 */
+/** 设施详情放在底部 Sheet 里，地图格只负责"看见"和"点开"。 */
 function openFacility(ctx, id) {
   const state = ctx.state;
   const f = Base.facility(id);
