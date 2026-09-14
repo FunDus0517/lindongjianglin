@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>凛冬降临 · UI 设计稿 v2（横屏 1536×1024）</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#060a12;--panel:rgba(16,24,40,.9);--panel2:rgba(20,30,50,.86);
+    --line:rgba(120,170,255,.2);--txt:#e9eefb;--dim:#8b9ab3;
+    --ice:#4e8dfb;--ice2:#7cc4ff;--warm:#ff9d4d;--good:#5ee0a0;--bad:#ff6b7a;--gold:#ffd166;
+    --r:14px;
+  }
+  body{
+    width:1536px;height:1024px;overflow:hidden;color:var(--txt);
+    font-family:"PingFang SC","Microsoft YaHei",-apple-system,sans-serif;
+    background:radial-gradient(1200px 700px at 50% 20%,#15243d 0%,#0a1220 55%,#060a12 100%);
+    position:relative;
+  }
+  .cap{position:absolute;font-size:12px;color:var(--dim);letter-spacing:.04em;line-height:1.6}
+  .cap b{color:var(--ice2);font-weight:600}
+
+  /* ── 顶部资源栏 ── */
+  .top{position:absolute;left:24px;right:24px;top:18px;height:64px;border-radius:16px;
+    background:var(--panel);border:1px solid var(--line);backdrop-filter:blur(16px);
+    display:flex;align-items:center;gap:14px;padding:0 16px;box-shadow:0 12px 30px rgba(0,0,0,.45)}
+  .avatar{width:44px;height:44px;border-radius:12px;background:linear-gradient(140deg,#2b4b8f,#152a52);
+    border:1px solid rgba(150,200,255,.4);display:flex;align-items:center;justify-content:center;font-size:22px}
+  .who{line-height:1.25}
+  .who .n{font-size:15px;font-weight:600}
+  .who .l{font-size:11px;color:var(--dim)}
+  .who .l em{font-style:normal;color:var(--gold)}
+  .xp{width:120px;height:6px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:4px}
+  .xp i{display:block;height:100%;width:82%;background:linear-gradient(90deg,#4e8dfb,#7cc4ff)}
+  .res{display:flex;align-items:center;gap:6px;font-size:15px;font-variant-numeric:tabular-nums}
+  .res b{font-weight:600}
+  .res.low b{color:var(--bad)}
+  .res .plus{width:16px;height:16px;border-radius:5px;background:rgba(124,196,255,.18);color:var(--ice2);
+    font-size:12px;display:flex;align-items:center;justify-content:center}
+  .topright{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:14px;font-variant-numeric:tabular-nums}
+  .wx{padding:5px 10px;border-radius:10px;background:rgba(124,196,255,.14);border:1px solid rgba(124,196,255,.35);color:var(--ice2);font-size:13px}
+  .gear{width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.07);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:17px}
+
+  /* ── 左栏 ── */
+  .left{position:absolute;left:24px;top:96px;width:196px;display:flex;flex-direction:column;gap:10px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);backdrop-filter:blur(14px);
+    box-shadow:0 10px 26px rgba(0,0,0,.4)}
+  .func{display:flex;flex-direction:column;padding:8px}
+  .frow{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:10px;font-size:14px}
+  .frow.on{background:rgba(78,141,251,.18);box-shadow:0 0 0 1px rgba(124,196,255,.35) inset}
+  .frow em{margin-left:auto;font-style:normal;font-size:11px;color:var(--bad)}
+  .me{padding:12px}
+  .me .row{display:flex;align-items:center;gap:10px}
+  .power{margin-top:10px;font-size:12px;color:var(--dim)}
+  .power b{display:block;font-size:19px;color:var(--gold);font-variant-numeric:tabular-nums}
+  .quest{padding:12px}
+  .qt{font-size:13px;font-weight:600;margin-bottom:8px}
+  .qi{margin-bottom:10px}
+  .qi .t{font-size:12px;color:var(--txt)}
+  .qi .p{font-size:11px;color:var(--dim);margin-top:2px}
+  .bar{height:5px;border-radius:3px;background:rgba(255,255,255,.12);margin-top:5px;overflow:hidden}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,#4e8dfb,#7cc4ff)}
+  .map{padding:10px;display:flex;flex-direction:column;align-items:center;gap:8px}
+  .circle{width:150px;height:150px;border-radius:50%;border:1px solid var(--line);position:relative;
+    background:radial-gradient(circle at 50% 45%,rgba(90,150,230,.22),rgba(10,18,32,.9) 70%)}
+  .circle .me2{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:16px}
+  .circle .nd{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--ice2);
+    box-shadow:0 0 8px rgba(124,196,255,.9)}
+  .mapbtns{display:flex;gap:6px;width:100%}
+  .mini{flex:1;text-align:center;font-size:11px;padding:6px 0;border-radius:9px;background:rgba(255,255,255,.07);
+    border:1px solid var(--line);color:var(--dim)}
+
+  /* ── 中央基地场景 ── */
+  .scene{position:absolute;left:232px;right:24px;top:96px;height:656px;border-radius:20px;overflow:hidden;
+    border:1px solid var(--line);
+    background:
+      radial-gradient(760px 380px at 52% 42%,rgba(96,156,236,.16),transparent 72%),
+      linear-gradient(180deg,#0f1c31 0%,#0c1728 58%,#091020 100%)}
+  .snowfloor{position:absolute;inset:0;background:
+    radial-gradient(3px 3px at 12% 22%,rgba(255,255,255,.5),transparent),
+    radial-gradient(2px 2px at 32% 12%,rgba(255,255,255,.4),transparent),
+    radial-gradient(2px 2px at 72% 18%,rgba(255,255,255,.45),transparent),
+    radial-gradient(3px 3px at 88% 34%,rgba(255,255,255,.35),transparent)}
+  .glow{position:absolute;width:220px;height:220px;border-radius:50%;
+    background:radial-gradient(circle,rgba(255,157,77,.3),transparent 68%)}
+  .bld{position:absolute;border-radius:10px;background:linear-gradient(160deg,#2c4166,#16233b);
+    border:1px solid rgba(150,195,255,.3);box-shadow:0 14px 30px rgba(0,0,0,.5)}
+  .bld::after{content:"";position:absolute;inset:-5px -5px auto -5px;height:10px;border-radius:8px;
+    background:linear-gradient(180deg,#eef5ff,#b7cde8);opacity:.92}
+  .bld.hi{border-color:rgba(124,196,255,.8);box-shadow:0 0 0 2px rgba(124,196,255,.4),0 16px 34px rgba(0,0,0,.55)}
+  .tag{position:absolute;transform:translate(-50%,0);padding:4px 10px;border-radius:10px;font-size:12px;
+    background:rgba(6,11,20,.85);border:1px solid var(--line);white-space:nowrap;color:var(--txt)}
+  .tag i{font-style:normal;color:var(--gold);margin-left:5px}
+  .ring{position:absolute;transform:translate(-50%,0);width:96px;height:6px;border-radius:3px;background:rgba(255,255,255,.16)}
+  .ring i{display:block;height:100%;width:64%;border-radius:3px;background:linear-gradient(90deg,#4e8dfb,#7cc4ff)}
+  .ringtxt{position:absolute;font-size:11px;color:var(--ice2);font-variant-numeric:tabular-nums}
+
+  /* 右下快捷按钮 */
+  .quick{position:absolute;right:22px;bottom:22px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .qb{width:74px;height:74px;border-radius:50%;background:linear-gradient(160deg,#1c2c4a,#101c31);
+    border:1px solid rgba(150,195,255,.32);display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;font-size:22px;box-shadow:0 10px 24px rgba(0,0,0,.45)}
+  .qb span{font-size:11px;color:var(--dim)}
+  .qb.main{background:linear-gradient(160deg,#4176da,#22437f);border-color:rgba(190,220,255,.55);box-shadow:0 10px 26px rgba(60,120,230,.45)}
+  .qb.main span{color:#eaf3ff}
+
+  /* 快捷功能区（右上竖排） */
+  .quickbar{position:absolute;right:22px;top:22px;display:flex;flex-direction:column;gap:8px}
+  .qbi{width:52px;height:52px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:17px}
+  .qbi span{font-size:9px;color:var(--dim)}
+
+  /* ── 底部界面条 ── */
+  .bottom{position:absolute;left:24px;right:24px;bottom:74px;height:186px;display:flex;gap:14px}
+  .bcard{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;
+    backdrop-filter:blur(14px);box-shadow:0 10px 26px rgba(0,0,0,.4);display:flex;flex-direction:column;gap:8px;overflow:hidden}
+  .bt{font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between}
+  .chip{padding:3px 8px;border-radius:8px;font-size:10px;background:rgba(255,255,255,.07);border:1px solid var(--line);color:var(--dim)}
+  .chip.mind{color:var(--ice2);border-color:rgba(124,196,255,.4)}
+  .chip.good{color:var(--good);border-color:rgba(94,224,160,.4)}
+  .chip.bad{color:var(--bad);border-color:rgba(255,107,122,.4)}
+  .tabs{display:flex;gap:6px}
+  .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+  .item{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;height:54px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:17px;position:relative}
+  .item span{font-size:9px;color:var(--dim)}
+  .item em{position:absolute;right:4px;bottom:2px;font-style:normal;font-size:9px;color:var(--ice2)}
+  .need{font-size:11px;display:flex;justify-content:space-between;color:var(--dim)}
+  .need b{color:var(--good);font-variant-numeric:tabular-nums}
+  .need b.no{color:var(--bad)}
+  .btnrow{display:flex;gap:8px;margin-top:auto}
+  .btn{flex:1;text-align:center;font-size:12px;font-weight:600;padding:8px 0;border-radius:10px}
+  .btn.g{background:rgba(255,255,255,.07);border:1px solid var(--line);color:var(--txt)}
+  .btn.p{background:linear-gradient(160deg,#4e8dfb,#2f63c8);box-shadow:0 6px 16px rgba(60,120,230,.35)}
+  .hero{display:flex;gap:10px;align-items:center}
+  .portrait{width:64px;height:74px;border-radius:10px;background:linear-gradient(160deg,#33507f,#1a2b4a);
+    border:1px solid rgba(150,200,255,.35);display:flex;align-items:center;justify-content:center;font-size:30px}
+  .attr{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:11px;color:var(--dim)}
+  .attr b{color:var(--txt);font-variant-numeric:tabular-nums}
+  .slider{height:5px;border-radius:3px;background:rgba(255,255,255,.12);position:relative}
+  .slider i{position:absolute;left:0;top:0;height:100%;width:68%;border-radius:3px;background:linear-gradient(90deg,#4e8dfb,#7cc4ff)}
+  .slider em{position:absolute;right:-2px;top:-4px;width:13px;height:13px;border-radius:50%;background:#dceaff}
+
+  /* ── 底部图例 ── */
+  .legend{position:absolute;left:24px;right:24px;bottom:18px;height:44px;border-radius:12px;
+    background:rgba(12,20,34,.7);border:1px solid var(--line);display:flex;align-items:center;
+    gap:26px;padding:0 18px;font-size:12px;color:var(--dim)}
+  .legend b{color:var(--txt);font-weight:600;margin-right:6px}
+  .legend .dot{width:7px;height:7px;border-radius:50%;background:var(--ice2);display:inline-block;margin-right:8px}
+
+  /* 标注 */
+  .anno{position:absolute;font-size:12px;color:var(--dim);line-height:1.65;letter-spacing:.02em}
+  .anno b{color:var(--ice2);font-weight:600}
+</style>
+</head>
+<body>
+  <!-- 顶部资源栏 -->
+  <div class="top">
+    <div class="avatar">🧣</div>
+    <div class="who">
+      <div class="n">玩家昵称</div>
+      <div class="l">Lv.<em>12</em> · 极寒降临 · 第 12 天</div>
+      <div class="xp"><i></i></div>
+    </div>
+    <div class="res" style="margin-left:26px">🪵 <b>12.5万</b> <span class="plus">+</span></div>
+    <div class="res">🪨 <b>8.7万</b> <span class="plus">+</span></div>
+    <div class="res">🍖 <b>6.3万</b> <span class="plus">+</span></div>
+    <div class="res low">💧 <b>4.2万</b> <span class="plus">+</span></div>
+    <div class="res">💎 <b>1250</b> <span class="plus">+</span></div>
+    <div class="topright">⏱ 16:32 <span class="wx">❄ −18.4℃ 暴雪</span> <span class="gear">⚙</span></div>
+  </div>
+
+  <!-- 左栏：功能栏 / 角色信息 / 任务追踪 / 小地图 -->
+  <div class="left">
+    <div class="panel func">
+      <div class="frow">📜 任务 <em>2</em></div>
+      <div class="frow">✉️ 邮件 <em>1</em></div>
+      <div class="frow">🧑‍🤝‍🧑 好友</div>
+    </div>
+
+    <div class="panel me">
+      <div class="row">
+        <div class="avatar" style="width:38px;height:38px;font-size:18px">🧣</div>
+        <div>
+          <div style="font-size:14px;font-weight:600">玩家昵称</div>
+          <div style="font-size:11px;color:var(--dim)">Lv.12 · 基地负责人</div>
+        </div>
+      </div>
+      <div class="power">战力<b>84217003</b></div>
+    </div>
+
+    <div class="panel quest">
+      <div class="qt">任务追踪</div>
+      <div class="qi">
+        <div class="t">主线：升级指挥中心 Lv.5</div>
+        <div class="p">4 / 5 · 奖励 🪵×500 💎×20</div>
+        <div class="bar"><i style="width:80%"></i></div>
+      </div>
+      <div class="qi" style="margin-bottom:0">
+        <div class="t">支线：收集 20 个木材</div>
+        <div class="p">12 / 20 · 奖励 🍖×200</div>
+        <div class="bar"><i style="width:60%"></i></div>
+      </div>
+    </div>
+
+    <div class="panel map">
+      <div class="circle">
+        <div class="me2">🏠</div>
+        <div class="nd" style="left:32px;top:34px"></div>
+        <div class="nd" style="left:104px;top:52px;background:#5ee0a0;box-shadow:0 0 8px rgba(94,224,160,.9)"></div>
+        <div class="nd" style="left:58px;top:104px;background:#ffd166;box-shadow:0 0 8px rgba(255,209,102,.9)"></div>
+      </div>
+      <div class="mapbtns"><div class="mini">全屏</div><div class="mini">返回</div></div>
+    </div>
+  </div>
+
+  <!-- 中央基地场景 -->
+  <div class="scene">
+    <div class="snowfloor"></div>
+    <div class="glow" style="left:520px;top:300px"></div>
+
+    <div class="bld" style="left:430px;top:196px;width:170px;height:132px"></div>
+    <div class="bld" style="left:150px;top:132px;width:118px;height:92px"></div>
+    <div class="bld" style="left:700px;top:118px;width:128px;height:96px"></div>
+    <div class="bld" style="left:132px;top:372px;width:120px;height:96px"></div>
+    <div class="bld" style="left:706px;top:388px;width:140px;height:104px"></div>
+    <div class="bld hi" style="left:412px;top:432px;width:132px;height:98px"></div>
+
+    <div class="tag" style="left:515px;top:168px">指挥中心<i>Lv.4</i></div>
+    <div class="tag" style="left:209px;top:104px">仓库<i>Lv.3</i></div>
+    <div class="tag" style="left:764px;top:90px">发电站<i>Lv.4</i></div>
+    <div class="tag" style="left:192px;top:344px">伐木场<i>Lv.2</i></div>
+    <div class="tag" style="left:776px;top:360px">农田<i>Lv.3</i></div>
+    <div class="tag" style="left:478px;top:404px">居民楼<i>Lv.2</i></div>
+
+    <div class="ring" style="left:764px;top:158px"><i></i></div>
+    <div class="ringtxt" style="left:722px;top:166px">升级中 00:12:30</div>
+
+    <!-- 快捷功能区（右上竖排） -->
+    <div class="quickbar">
+      <div class="qbi">✉️<span>邮件</span></div>
+      <div class="qbi">🎒<span>背包</span></div>
+      <div class="qbi">⚙️<span>设置</span></div>
+      <div class="qbi">⋯<span>更多</span></div>
+    </div>
+
+    <!-- 右下快捷按钮 -->
+    <div class="quick">
+      <div class="qb main">🔨<span>建造</span></div>
+      <div class="qb">🎖️<span>英雄</span></div>
+      <div class="qb">🎒<span>背包</span></div>
+      <div class="qb">⋯<span>更多</span></div>
+    </div>
+  </div>
+
+  <!-- 底部界面条：建造 / 英雄 / 背包 / 设置 -->
+  <div class="bottom">
+    <div class="bcard">
+      <div class="bt">建造界面 <span class="chip">可建造 2/3</span></div>
+      <div class="tabs"><span class="chip mind">资源</span><span class="chip">生产</span><span class="chip">功能</span><span class="chip">装扮</span></div>
+      <div class="need"><span>木材工坊 Lv.1</span><b>🪵300 🪨200</b></div>
+      <div class="need"><span>温室 Lv.1</span><b class="no">🪵400 🧱500</b></div>
+      <div class="btnrow"><div class="btn g">详情</div><div class="btn p">建造</div></div>
+    </div>
+
+    <div class="bcard">
+      <div class="bt">英雄界面 <span class="chip mind">战力 1520</span></div>
+      <div class="hero">
+        <div class="portrait">🧑‍🚀</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600">林晚 <span style="color:var(--dim);font-size:11px">Lv.12 医疗负责人</span></div>
+          <div class="attr" style="margin-top:6px">
+            <div>健康 <b>92</b></div><div>战力 <b>1520</b></div>
+            <div>防护 <b>38</b></div><div>效率 <b>1.35×</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="btnrow"><div class="btn g">属性</div><div class="btn g">装备</div><div class="btn p">编队</div></div>
+    </div>
+
+    <div class="bcard">
+      <div class="bt">背包界面 <span class="chip">76 / 100</span></div>
+      <div class="grid5">
+        <div class="item">🪵<span>木材</span><em>120</em></div>
+        <div class="item">🪨<span>石材</span><em>86</em></div>
+        <div class="item">🍖<span>食物</span><em>42</em></div>
+        <div class="item">💧<span>饮水</span><em>55</em></div>
+        <div class="item">🔩<span>零件</span><em>18</em></div>
+      </div>
+      <div class="btnrow"><div class="btn g">批量使用</div><div class="btn g">一键出售</div><div class="btn p">整理</div></div>
+    </div>
+
+    <div class="bcard">
+      <div class="bt">设置界面 <span class="chip">基础设置</span></div>
+      <div style="display:flex;flex-direction:column;gap:9px;font-size:12px">
+        <div style="display:flex;align-items:center;gap:10px"><span style="width:42px;color:var(--dim)">音乐</span><div class="slider" style="flex:1"><i></i><em></em></div></div>
+        <div style="display:flex;align-items:center;gap:10px"><span style="width:42px;color:var(--dim)">音效</span><div class="slider" style="flex:1"><i style="width:88%"></i><em style="left:86%"></em></div></div>
+        <div style="display:flex;align-items:center;gap:10px"><span style="width:42px;color:var(--dim)">震动</span><div class="slider" style="flex:1"><i style="width:100%"></i><em style="left:98%"></em></div></div>
+        <div style="display:flex;align-items:center;gap:10px"><span style="width:42px;color:var(--dim)">画质</span><div class="slider" style="flex:1"><i style="width:72%"></i><em style="left:70%"></em></div></div>
+      </div>
+      <div class="btnrow"><div class="btn g">退出登录</div></div>
+    </div>
+  </div>
+
+  <!-- 底部图例 -->
+  <div class="legend">
+    <span><span class="dot"></span><b>界面风格</b>简洁、现代、沉浸式</span>
+    <span><span class="dot"></span><b>操作逻辑</b>点击明确、反馈及时、流程顺畅</span>
+    <span><span class="dot"></span><b>交互体验</b>符合系统设计规范 · 支持手势操作</span>
+    <span><span class="dot"></span><b>整体目标</b>快速上手、轻松管理基地、享受生存与建设的乐趣</span>
+  </div>
+
+  <!-- 标注 -->
+  <div class="anno" style="left:24px;top:82px;width:196px;text-align:right;transform:translateY(-100%)"></div>
+</body>
+</html>
