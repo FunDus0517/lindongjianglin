@@ -579,15 +579,48 @@ input.search { width: 100%; min-height: var(--touch); padding: 0 var(--sp-4); bo
     padding: 8px max(var(--sp-4), env(safe-area-inset-right)) calc(var(--nav-h) + var(--safe-b) + 12px) max(var(--sp-4), env(safe-area-inset-left));
   }
 
-  .hud-page { display: grid; grid-template-columns: 206px minmax(0, 1fr); gap: 10px; align-items: start; }
-  .hud-side { order: 0; }
-  .hud-main { grid-column: 2; }
+  .hud-page { display: grid; grid-template-columns: 206px minmax(0, 1fr); gap: 10px; align-items: stretch; height: 100%; }
+  .hud-side { order: 0; height: 100%; overflow-y: auto; }
+  .hud-main { grid-column: 2; height: 100%; position: relative; }
+
+  /* ---- 主界面 = 一屏 HUD：页面本身不许滚动，信息走面板弹层 ---- */
+  .page[data-hud="1"] { height: 100%; overflow: hidden; padding: 8px max(var(--sp-3), env(safe-area-inset-right)) 10px max(var(--sp-3), env(safe-area-inset-left)); }
+  .hud-overlay {
+    position: absolute; inset: 0; pointer-events: none;
+    display: flex; flex-direction: column; justify-content: space-between;
+  }
+  .hud-tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 10px; }
+  .hud-bottom { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; padding: 10px 100px 10px 10px; }
+  .hud-hint {
+    pointer-events: auto; display: flex; align-items: center; gap: 8px; text-align: left;
+    max-width: min(560px, 66%); padding: 7px 12px; border-radius: var(--r-chip);
+    border: 1px solid var(--c-line-2); background: rgba(6, 9, 17, 0.74); color: var(--c-text);
+    font-size: var(--fs-sm); cursor: pointer;
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  }
+  .hud-hint .ellipsis { min-width: 0; }
+  .hud-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+  .hud-pill {
+    pointer-events: auto; display: inline-flex; align-items: center; gap: 5px;
+    padding: 5px 11px; border-radius: var(--r-chip); border: 1px solid var(--c-line);
+    background: rgba(8, 13, 24, 0.74); color: var(--c-text-2); font-size: var(--fs-xs);
+    cursor: pointer; transition: transform var(--t-fast) var(--ease);
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  }
+  .hud-pill .ic { font-size: 13px; line-height: 1; }
+  .hud-pill.warn { border-color: var(--c-warn); color: var(--c-warn); }
+  .hud-pill.good { border-color: var(--c-line-2); color: var(--c-text); }
+  .hud-pill:active { transform: scale(0.97); }
+  /* 新手引导浮层：压在场景下缘居中（不占页面高度） */
+  .hud-tutorial {
+    position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+    width: min(560px, 74%); margin: 0; pointer-events: auto;
+  }
   /* 中央场景按设计稿铺满中央区（不要卡片感）：外框顶边、去圆角去描边，
      画布层按美术图比例 cover 撑满，节点百分比仍对着图。 */
   .hud-main > .scene {
-    /* 正好铺满可视中央区：视口高 - 顶栏 80 - 底栏 61 - 上下留白，避免场景被底部裁掉 */
-    height: calc(100dvh - 166px); min-height: 200px;
-    width: 100%; aspect-ratio: auto;
+    /* 一屏 HUD：场景就是中央区本身（铺满，不滚动） */
+    height: 100%; width: 100%; aspect-ratio: auto; min-height: 0;
     border: 0; border-radius: 0; box-shadow: none;
     background: linear-gradient(165deg, #16233c, #0a1120 55%, #060911);
   }

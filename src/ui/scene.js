@@ -113,7 +113,18 @@ export function hudSide(state, ctx) {
           h('div', { class: 'bar xp' }, h('i', { style: { width: `${Math.round(g.ratio * 100)}%` } })))),
       h('div', { class: 'row between', style: { marginTop: '6px' } },
         h('span', { class: 'xs muted' }, `⚔️ 战力 ${state.power}`),
-        h('span', { class: 'xs muted ellipsis' }, `锋芒 ${state.fame}（${b.label}）`))),
+        h('span', { class: 'xs muted ellipsis' }, `锋芒 ${state.fame}（${b.label}）`)),
+      // 互助规模与能源状态常驻在这张卡上（原来的主界面卡片被收进面板后，这两条重要状态不能丢）
+      h('div', { class: 'row between', style: { marginTop: '4px' } },
+        h('span', { class: 'xs muted ellipsis' },
+          `👥 互助 ${state.aid?.members ?? 0} 人｜士气 ${Math.round(state.aid?.morale ?? 0)}`),
+        h('span', {
+          class: 'xs ellipsis',
+          style: {
+            color: state.base.power > 0 && state.flags?.energy_ok === false ? 'var(--c-bad)' : 'var(--c-dim)',
+          },
+        }, state.base.power === 0 ? '🔌 无能源设施'
+          : state.flags?.energy_ok === false ? '🔌 能源停摆' : '🔌 能源正常'))),
 
     h('div', { class: 'hud-card' },
       h('div', { class: 'row between' },

@@ -146,7 +146,10 @@ export function renderPage(shell, node) {
   const focusKey = active?.dataset?.focusKey;
   const caret = active?.selectionStart ?? null;
   const scroll = shell.main.scrollTop;
-  mount(shell.main, h('div', { class: 'page' }, node));
+  const page = h('div', { class: 'page' }, node);
+  // 一屏 HUD 的页面（class 带 hud-page）要撑满可视区、自己不许滚动（CSS 用 [data-hud="1"] 认它）
+  if (String(node?.className ?? '').includes('hud-page')) page.setAttribute('data-hud', '1');
+  mount(shell.main, page);
   shell.main.scrollTop = scroll;
   if (focusKey) {
     const next = shell.main.querySelector(`[data-focus-key="${focusKey}"]`);
