@@ -81,19 +81,24 @@ enum Content {
                 completion(false)
                 return
             }
+            let assets = json["assets"] as? [String] ?? []
             let known = UserDefaults.standard.string(forKey: versionKey)
             if known == version && hasLocalCopy {
                 completion(false)
                 return
             }
-            let ok = write(files: files)
+            let ok = write(files: files, assets: assets)
             if ok { UserDefaults.standard.set(version, forKey: versionKey) }
             completion(ok)
         }.resume()
     }
 
     /// 整包写入：先写临时目录，再原子替换，避免更新到一半的站点被加载。
-    private static func write(files: [String: String]) -> Bool {
+    /// - Parameters:
+    ///   - files: 文本文件（源码/样式/版本清单），按 utf8 写盘
+    ///   - assets: 二进制资源（如中央场景图）的站点相对路径；按路径回服务器拉一份，
+    ///             这样**换美术图/改内容都不需要重新出包和签名**
+    private static func write(files: [String: String], assets: [String] = []) -> Bool {
         let fm = FileManager.default
         let base = root.deletingLastPathComponent()
         let staging = base.appendingPathComponent("winterfall-www-staging", isDirectory: true)
@@ -108,6 +113,14 @@ enum Content {
                 let target = staging.appendingPathComponent(clean)
                 try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
                 try Data(text.utf8).write(to: target)
+            }
+            for path in assets {
+                let clean = path.replacingOccurrences(of: "..", with: "")
+                guard !clean.hasPrefix("/"), !clean.isEmpty, let url = URL(string: clean, relativeTo: remoteBase) else { continue }
+                guard let data = try? Data(contentsOf: url) else { continue }
+                let target = staging.appendingPathComponent(clean)
+                try? fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try? data.write(to: target)
             }
             guard fm.fileExists(atPath: staging.appendingPathComponent("index.html").path) else { return false }
 

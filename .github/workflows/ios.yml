@@ -27,8 +27,9 @@ jobs:
         run: |
           rm -rf ios/www
           mkdir -p ios/www
-          cp index.html manifest.webmanifest icon.svg ios/www/
+          cp index.html manifest.webmanifest icon.svg version.json ios/www/
           cp -R src ios/www/src
+          if [ -d assets ]; then cp -R assets ios/www/assets; fi
           echo "bundled files: $(find ios/www -type f | wc -l)"
 
       - name: 生成 Xcode 工程

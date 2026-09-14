@@ -11,6 +11,8 @@ import * as audio from './core/audio.js';
 import * as prefs from './core/prefs.js';
 import { go, current, onRoute, start as startRouter } from './core/router.js';
 import { createShell, renderChrome, renderPage, startFeedbackLoop } from './ui/shell.js';
+import { showNotes } from './ui/notes.js';
+import * as Update from './systems/Update.js';
 import { sheet } from './ui/components.js';
 import { h } from './core/dom.js';
 import * as Save from './systems/Save.js';   // 很小，首屏要用来判断“继续游戏”
@@ -81,7 +83,22 @@ function prefetchAll() {
 const NEEDS_RUN = ['game', 'action', 'warehouse', 'mind', 'characters', 'quest', 'base', 'event', 'battle', 'ending', 'milestone', 'duel', 'achievement'];
 
 let state = null;
+/** 服务器上的版本信息（有更新时非空）；由 checkUpdate() 填充。 */
+let updateInfo = null;
 const shell = createShell(document.getElementById('app'));
+
+/**
+ * 开局问一次服务器版本：有新内容就提示玩家（内容都在服务器上，所以改内容不用重新出包/签名）。
+ * 离线或失败就静默跳过，绝不阻塞游戏。
+ */
+function checkUpdate() {
+  Update.check().then((info) => {
+    if (!info || !info.hasUpdate) return;
+    updateInfo = info;
+    store.toast(`发现新版本 ${info.version}：${info.title || '点顶部按钮更新'}`, 'mind');
+    render();
+  });
+}
 
 /* ---------------- 路由与渲染 ---------------- */
 
@@ -114,6 +131,10 @@ function render() {
       go(target);
     },
     onSettings: () => go(state ? 'settings' : 'home'),
+    // 版本：有新版本就显示可点的更新按钮，否则显示版本号（点开更新公告）
+    update: updateInfo?.hasUpdate ? updateInfo : null,
+    onUpdate: () => Update.reload(),
+    onNotes: () => showNotes(updateInfo ?? Update.local(), { onUpdate: () => Update.reload() }),
   });
 
   const cached = ready.get(name);
@@ -336,6 +357,7 @@ function bootstrap() {
   startFeedbackLoop(store);
   startRouter();          // 首屏只加载外壳 + 首页模块
   prefetchAll();          // 空闲时预热引擎与其余页面
+  checkUpdate();          // 顺带问一句服务器：有没有新版本
 
   if (state) {
     loadEngine().then(({ effects }) => {

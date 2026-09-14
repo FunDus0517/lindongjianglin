@@ -90,6 +90,12 @@ button:focus-visible, .chip:focus-visible, .item:focus-visible, .row-item:focus-
 .hud-res .res:active { transform: scale(0.97); }
 .hud-clock { display: grid; gap: 1px; flex: 0 0 auto; }
 .hud-sub { display: flex; align-items: center; gap: 6px; min-width: 0; }
+/* 顶栏里的版本号：长得像标签，实际是按钮（点开更新公告） */
+.hud-sub .tag.ver {
+  background: none; border: 1px solid var(--c-line); color: var(--c-dim);
+  cursor: pointer; font-variant-numeric: tabular-nums;
+}
+.hud-sub .tag.ver:hover { color: var(--c-mind); border-color: var(--c-line-2); }
 /* 左侧图标栏：默认不占位，横屏/宽屏时出现（见下方媒体查询） */
 .side { display: none; }
 /* 窄屏（390px 级手机）：资源栏压缩，副行收掉两个可牺牲的标签 */

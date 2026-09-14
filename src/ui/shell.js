@@ -11,6 +11,7 @@ import { ambient, weather } from '../systems/Weather.js';
 import { META } from '../systems/Survival.js';
 import { band } from '../systems/Fame.js';
 import { countCategory } from '../systems/Inventory.js';
+import { VERSION } from '../data/build.js';
 import * as Growth from '../systems/Growth.js';
 import * as Mind from '../systems/Mind.js';
 
@@ -47,7 +48,7 @@ const HUD_RES = [
  * 返回值是**内容数组**：外层 <header class="topbar"> 由 createShell 直接建在 .app 下，
  * 这样 .app 的栅格项就是 .topbar/.side/.main/.bottomnav 本身（多包一层 div 会让栅格全部失效）。
  */
-export function topbar(state, { onSettings, onNav } = {}) {
+export function topbar(state, { onSettings, onNav, onNotes, onUpdate, update } = {}) {
   const w = weather(state.weather);
   const b = band(state.fame);
   const g = Growth.view(state);
@@ -81,7 +82,17 @@ export function topbar(state, { onSettings, onNav } = {}) {
       h('span', { class: 'xs muted ellipsis grow' }, state.chapterTitle ?? ''),
       h('span', { class: 'tag phase' }, PHASE_LABEL[dayPhase(state.time)]),
       h('span', { class: 'tag mind brain', title: `光脑 Lv.${state.mindLevel}｜${Mind.brain(state).name}` }, `💠 ${state.mindLevel}`),
-      h('span', { class: ['tag', 'fame', b.color], title: b.desc }, `锋芒 ${state.fame}`)),
+      h('span', { class: ['tag', 'fame', b.color], title: b.desc }, `锋芒 ${state.fame}`),
+      // 版本号常驻：点它看「更新公告」；服务器发了新版时这里变成一个可点的更新按钮
+      update?.hasUpdate
+        ? btn(`🔔 新版本 ${update.version}`, {
+          kind: 'primary', sm: true, onClick: onUpdate,
+          title: `服务器已更新到 ${update.version}（构建 ${update.build}），点一下刷新到最新内容`,
+        })
+        : h('button', {
+          type: 'button', class: 'tag ver', title: '点这里看更新公告',
+          onClick: () => onNotes?.(),
+        }, VERSION)),
   ];
 }
 

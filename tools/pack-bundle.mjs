@@ -26,34 +26,39 @@ async function walk(dir, base = dir, out = []) {
 const files = (await walk(srcDir)).sort();
 const bundle = {};
 const skipped = [];
+const assets = [];
 const hash = createHash('sha256');
 let rawBytes = 0;
 
 for (const rel of files) {
   const full = join(srcDir, rel);
   const info = await stat(full);
-  // 清单是「一堆文本文件」的 JSON（iOS 侧直接 Data(utf8) 写盘），所以只收文本。
-  // 二进制资源（如中央场景图 assets/*.png）跳过并明确报出来——不能让整条 App 更新链断掉。
-  if (info.size > 2 * 1024 * 1024) { skipped.push(`${rel}（${(info.size / 1048576).toFixed(1)} MB，超 2 MB）`); continue; }
   const buf = await readFile(full);
   const text = buf.toString('utf8');
-  if (text.includes('\uFFFD')) { skipped.push(`${rel}（二进制）`); continue; }
+  // 清单的 files 段是纯文本（iOS 侧按 utf8 写盘），二进制/超大文件走 assets 段：
+  // 只登记路径，App 更新时自己去服务器按路径拉文件 —— 这样连美术图也不用重新出包/签名。
+  if (info.size > 2 * 1024 * 1024 || text.includes('\uFFFD')) {
+    assets.push(rel);
+    hash.update(rel).update(buf);            // 二进制也要进版本号，否则只换图不会触发更新
+    skipped.push(`${rel}（${(info.size / 1048576).toFixed(1)} MB → assets 段，App 自己去服务器拉）`);
+    continue;
+  }
   bundle[rel] = text;
   hash.update(rel).update(text);
   rawBytes += info.size;
 }
 
 const version = forcedVersion ?? hash.digest('hex').slice(0, 16);
-const payload = { version, generatedAt: new Date().toISOString(), count: files.length, files: bundle };
+const payload = { version, generatedAt: new Date().toISOString(), count: files.length, assets, files: bundle };
 
 await writeFile(outFile, JSON.stringify(payload), 'utf8');
 const size = (await stat(outFile)).size;
 console.log(`清单已生成：${outFile}`);
 console.log(`  版本   : ${version}`);
-console.log(`  文件数 : ${files.length - skipped.length}（跳过 ${skipped.length}）`);
-console.log(`  原始   : ${(rawBytes / 1024).toFixed(0)} KB`);
+console.log(`  文件数 : ${files.length - assets.length} 个文本 + ${assets.length} 个资源`);
+console.log(`  原始   : ${(rawBytes / 1024).toFixed(0)} KB（文本）`);
 console.log(`  清单   : ${(size / 1024).toFixed(0)} KB（gzip 后由服务器自动压缩）`);
 if (skipped.length) {
-  console.log('  跳过的非文本资源（App 离线包不带，站点原样照样能用）：');
+  console.log('  走 assets 段的资源（App 更新时自己去服务器按路径拉）：');
   for (const s of skipped) console.log(`    - ${s}`);
 }
