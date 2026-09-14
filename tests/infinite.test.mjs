@@ -18,6 +18,7 @@ import * as Save from '../src/systems/Save.js';
 import * as Base from '../src/systems/Base.js';
 import * as Crew from '../src/systems/Crew.js';
 import * as WorldMap from '../src/systems/Map.js';
+import * as Goal from '../src/systems/Goal.js';
 import * as Tech from '../src/systems/Tech.js';
 import * as NPC from '../src/systems/NPC.js';
 import * as Event from '../src/systems/Event.js';
@@ -407,4 +408,28 @@ test('地图：道路可以被封，绕行更慢，到期自动恢复', () => {
   assert.equal(WorldMap.routeState(s, 'market_north').blocked, false, '到期必须自动恢复');
   const round = Save.restore(Save.serialize(s));
   assert.ok(round.state.roads, '道路状态必须进存档');
+});
+test('长期目标：进度由真实状态推导，达成后永久记录并发奖励', () => {
+  const s = fresh();
+  const v = Goal.view(s);
+  assert.equal(v.length, 4, '策划案 §十三 的四条长期目标');
+  assert.ok(v.every((g) => g.percent >= 0 && g.percent <= 100), '进度必须在 0—100 之间');
+  assert.equal(Goal.summary(s).done, 0, '开局不该有已完成目标');
+  assert.ok(Goal.nearest(s), '必须能指出下一个目标');
+
+  // 科技目标：与真实科技等级一致
+  s.cores = 400;
+  Inventory.add(s, 'blueprint', 40);
+  for (const id of ['heat', 'power', 'explore', 'defense', 'loop']) {
+    for (let i = 0; i < 5; i++) applyOutcome(s, Tech.research(s, id), { autosave: false });
+  }
+  assert.equal(Goal.view(s).find((g) => g.id === 'tech').percent, 100, '五条线满级必须等于 100%');
+
+  // 达成：写进存档 + 发奖励 + 只发一次
+  const out = Goal.check(s);
+  assert.ok(out && out.notes.some((n) => /长期目标达成/.test(n)), '达成必须给反馈');
+  assert.ok(out.cores > 0 && out.currency > 0, '达成必须有奖励');
+  assert.equal(Goal.check(s), null, '同一个目标只能达成一次');
+  const round = Save.restore(Save.serialize(s));
+  assert.equal(Goal.view(round.state).find((g) => g.id === 'tech').wasDone, true, '达成记录必须进存档');
 });

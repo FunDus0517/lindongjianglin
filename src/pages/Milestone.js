@@ -7,9 +7,11 @@ import { h } from '../core/dom.js';
 import { btn, card, progress, tag } from '../ui/components.js';
 import { PHASES, chapterOf, phaseOf } from '../data/chapters.js';
 import { band } from '../systems/Fame.js';
+import * as Goal from '../systems/Goal.js';
 import * as Assistant from '../systems/Assistant.js';
 import * as Base from '../systems/Base.js';
 import * as Tech from '../systems/Tech.js';
+import * as Weather from '../systems/Weather.js';
 
 export function MilestonePage(ctx) {
   const state = ctx.state;
@@ -18,20 +20,22 @@ export function MilestonePage(ctx) {
   const rep = (state.reports ?? [])[(state.reports ?? []).length - 1] ?? null;
   const ass = Assistant.assistant(state);
   const form = Base.form(state);
+  const goals = Goal.summary(state);
+  const fc = Weather.forecast(state);
 
   return h('div', { class: 'col', style: { paddingTop: '4vh' } },
     h('div', { class: 'center' },
       h('div', { class: 'hero-sub' }, `世界阶段 · ${phase.name}`),
       h('h1', { style: { fontSize: 'var(--fs-2xl)', margin: '10px 0' } }, `第 ${state.day} 天`),
       h('div', { class: 'small muted' }, phase.desc),
-      h('div', { class: 'xs muted', style: { marginTop: '6px' } }, `阶段不会结束，只改变世界状态 —— 气温继续下降、资源继续变少、危险继续增加。`),
+      h('div', { class: 'xs muted', style: { marginTop: '6px' } }, '阶段不会结束，只改变世界状态 —— 气温继续下降、资源继续变少、危险继续增加。'),
     ),
 
     card([
       h('div', { class: 'strong', style: { marginBottom: '10px' } }, '当前世界状态'),
       h('div', { class: 'col', style: { gap: '6px' } },
         h('div', { class: 'row between' }, h('span', { class: 'small muted' }, '章节'), h('span', { class: 'strong small' }, chapterOf(state.day).title)),
-        h('div', { class: 'row between' }, h('span', { class: 'small muted' }, '室外气温'), h('span', { class: 'strong small' }, `${ass.weather[0] ? '' : ''}${Math.round(state.stats.warmth)} 体温`)),
+        h('div', { class: 'row between' }, h('span', { class: 'small muted' }, '室外气温'), h('span', { class: 'strong small' }, `${Weather.ambient(state)}℃（明日预报「${fc.w.name}」）`)),
         h('div', { class: 'row between' }, h('span', { class: 'small muted' }, '基地形态'), h('span', { class: 'strong small' }, `${form.icon} ${form.name}（设施合计 ${Base.totalLevels(state)}）`)),
         h('div', { class: 'row between' }, h('span', { class: 'small muted' }, '科技'), h('span', { class: 'strong small' }, `合计 Lv.${Tech.totalLevels(state)}`)),
         h('div', { class: 'row between' }, h('span', { class: 'small muted' }, '幸存者'), h('span', { class: 'strong small' }, `互助 ${state.aid?.members ?? 0} 人｜士气 ${Math.round(state.aid?.morale ?? 0)}`)),
@@ -40,6 +44,20 @@ export function MilestonePage(ctx) {
       h('div', { style: { marginTop: '10px' } },
         progress(state.day - phase.from + 1, Math.max(1, (phase.to ?? phase.from + 99) - phase.from + 1), { cls: 'mind', showText: true, label: '本阶段已走' })),
     ], { cls: 'mind' }),
+
+    // 长期目标（V3.0 策划案 §十三）：没有通关，但有方向
+    card([
+      h('div', { class: 'row between' },
+        h('span', { class: 'strong' }, '长期目标'),
+        tag(`${goals.done} / ${goals.total} 达成 · 总进度 ${goals.overall}%`, goals.done > 0 ? 'good' : 'mind')),
+      h('div', { class: 'xs muted', style: { marginTop: '4px' } }, '你要建造的不是一个结局，而是一座能一直存在的城。'),
+      h('div', { class: 'col', style: { gap: '10px', marginTop: '12px' } }, goals.items.map((g) => h('div', null,
+        h('div', { class: 'row between' },
+          h('span', { class: 'small strong' }, `${g.icon} ${g.name}`),
+          h('span', { class: 'xs muted' }, g.done ? '✅ 已达成' : `${g.percent}%`)),
+        h('div', { style: { marginTop: '4px' } }, progress(g.percent, 100, { cls: g.done ? '' : 'mind' })),
+        h('div', { class: 'xs muted', style: { marginTop: '2px' } }, g.detail)))),
+    ], { cls: 'flat' }),
 
     rep
       ? card([
@@ -62,6 +80,7 @@ export function MilestonePage(ctx) {
     card([
       h('div', { class: 'strong', style: { marginBottom: '8px' } }, '光脑建议'),
       ass.advice.map((l, i) => h('div', { class: 'small' }, `${i + 1}. ${l}`)),
+      h('div', { class: 'xs muted', style: { marginTop: '8px' } }, `基地管理：${ass.manage[0] ?? ''}`),
     ], { cls: 'flat' }),
 
     h('div', { class: 'btn-group' },

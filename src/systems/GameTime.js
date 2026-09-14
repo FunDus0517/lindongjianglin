@@ -15,6 +15,7 @@ import * as Death from './Death.js';
 import * as Ending from './Ending.js';
 import * as Event from './Event.js';
 import * as Faction from './Faction.js';
+import * as Goal from './Goal.js';
 import * as Growth from './Growth.js';
 import * as Inventory from './Inventory.js';
 import * as Market from './Market.js';
@@ -143,6 +144,10 @@ export function rollDay(state) {
     notes.push(`世界进入「${phase.name}」：${phase.desc}`);
     toast(`世界阶段：${phase.name}｜${phase.tagline}`, 'mind');
   }
+
+  // 长期目标（V3.0 §十三）：目标进度由现有状态推导，达成即永久记录
+  const goalOutcome = Goal.check(state);
+  if (goalOutcome) { notes.push(...goalOutcome.notes); state.currency += goalOutcome.currency; state.cores += goalOutcome.cores; }
 
   Achievement.sync(state);
   Save.save(state, '每日刷新');
