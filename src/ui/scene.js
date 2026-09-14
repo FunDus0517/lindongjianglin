@@ -11,7 +11,12 @@
  * @module ui/scene
  */
 import { h } from '../core/dom.js';
+import { btn, sheet } from './components.js';
 import * as Base from '../systems/Base.js';
+import * as Growth from '../systems/Growth.js';
+import * as Map from '../systems/Map.js';
+import * as Quest from '../systems/Quest.js';
+import { band } from '../systems/Fame.js';
 
 /** 图的原始尺寸（1672×941），用于保持比例。 */
 export const SCENE_SRC = './assets/base-scene.png';
@@ -83,3 +88,81 @@ export function sceneView(state, { onPick } = {}) {
 }
 
 export default sceneView;
+
+/**
+ * 左侧信息栏（设计稿「整体布局图」的左栏：角色信息 / 任务追踪 / 小地图）。
+ * 横屏时固定在场景左边；竖屏时排到正文之后（order 控制），不抢场景的位置。
+ */
+export function hudSide(state, ctx) {
+  const g = Growth.view(state);
+  const b = band(state.fame);
+  const quests = Quest.today(state).slice(0, 3);
+  const regions = Map.view(state).slice(0, 4);
+
+  return h('aside', { class: 'hud-side' },
+    h('div', { class: 'hud-card' },
+      h('div', { class: 'row', style: { gap: '8px' } },
+        h('span', { class: 'hud-avatar' }, '🧣'),
+        h('div', { class: 'grow', style: { minWidth: 0 } },
+          h('div', { class: 'row nowrap', style: { gap: '6px' } },
+            h('span', { class: 'strong small' }, `Lv.${g.level}`),
+            h('span', { class: 'xs muted ellipsis' }, g.title)),
+          h('div', { class: 'bar xp' }, h('i', { style: { width: `${Math.round(g.ratio * 100)}%` } })))),
+      h('div', { class: 'row between', style: { marginTop: '6px' } },
+        h('span', { class: 'xs muted' }, `⚔️ 战力 ${state.power}`),
+        h('span', { class: 'xs muted ellipsis' }, `锋芒 ${state.fame}（${b.label}）`))),
+
+    h('div', { class: 'hud-card' },
+      h('div', { class: 'row between' },
+        h('span', { class: 'hud-cap' }, '任务追踪'),
+        btn('全部', { kind: 'ghost', sm: true, onClick: () => ctx.go('quest') })),
+      quests.length === 0
+        ? h('div', { class: 'xs muted', style: { marginTop: '6px' } }, '今天的任务都完成了。')
+        : h('div', { class: 'col', style: { gap: '7px', marginTop: '6px' } }, quests.map((q) => {
+          const [cur, target] = Quest.progressOf(state, q.id);
+          return h('div', null,
+            h('div', { class: 'row between' },
+              h('span', { class: 'xs ellipsis' }, `${q.kind === '主线' ? '📌' : '📋'} ${q.title}`),
+              h('span', { class: 'xs muted' }, `${cur}/${target}`)),
+            h('div', { class: 'bar mind' }, h('i', { style: { width: `${Math.min(100, (cur / target) * 100)}%` } })));
+        }))),
+
+    h('div', { class: 'hud-card' },
+      h('div', { class: 'row between' },
+        h('span', { class: 'hud-cap' }, '小地图'),
+        btn('探索', { kind: 'ghost', sm: true, onClick: () => ctx.go('action') })),
+      h('div', { class: 'xs muted ellipsis', style: { marginTop: '6px' } }, Map.brief(state)),
+      h('div', { class: 'minimap' }, regions.map((r) => h('div', { class: 'mm-region' },
+        h('div', { class: 'row between' },
+          h('span', { class: 'xs' }, `${r.icon} ${r.name}`),
+          h('span', { class: 'xs muted' }, `${r.places.length} 处`)),
+        h('div', { class: 'row wrap', style: { gap: '4px', marginTop: '3px' } },
+          r.places.slice(0, 8).map((p) => h('span', {
+            class: ['mm-dot', p.here ? 'here' : ''],
+            title: `${p.name}｜${p.indoor ? '室内' : '室外'}｜${p.minutes} 分钟`,
+          }, p.icon))))))),
+  );
+}
+
+/** 右下角快捷按钮组（设计稿：建造 / 队伍 / 背包 / 更多）。 */
+export function hudActions(ctx) {
+  const more = () => sheet({
+    title: '更多',
+    body: [
+      h('div', { class: 'btn-group' },
+        btn('任务', { kind: 'ghost', onClick: () => ctx.go('quest') }),
+        btn('对战', { kind: 'ghost', onClick: () => ctx.go('duel') }),
+        btn('成就', { kind: 'ghost', onClick: () => ctx.go('achievement') }),
+        btn('设施明细', { kind: 'ghost', onClick: () => ctx.go('base') }),
+        btn('光脑', { kind: 'ghost', onClick: () => ctx.go('mind') }),
+        btn('设置', { kind: 'ghost', onClick: () => ctx.go('settings') })),
+    ],
+  });
+  return h('div', { class: 'hud-actions' },
+    [['🏗️', '建造', 'base'], ['👥', '队伍', 'characters'], ['🎒', '背包', 'warehouse']].map(([ic, lb, route]) =>
+      h('button', {
+        type: 'button', class: 'hud-fab', title: lb, onClick: () => ctx.go(route),
+      }, h('span', { class: 'ic' }, ic), h('span', { class: 'lb' }, lb))),
+    h('button', { type: 'button', class: 'hud-fab', title: '更多', onClick: more },
+      h('span', { class: 'ic' }, '⋯'), h('span', { class: 'lb' }, '更多')));
+}

@@ -514,3 +514,50 @@ input.search { width: 100%; min-height: var(--touch); padding: 0 var(--sp-4); bo
 @media (orientation: landscape) and (max-height: 560px) {
   .scene { aspect-ratio: auto; height: min(62vh, 320px); }
 }
+
+/* ---------- 横屏 HUD 主视图（设计稿「整体布局图」：左信息栏 + 中央场景 + 右下快捷按钮） ---------- */
+.hud-page { display: flex; flex-direction: column; gap: var(--sp-3); }
+/* 竖屏：左栏信息排到正文之后，不抢场景的位置（order 只影响顺序，不改 DOM） */
+.hud-side { order: 2; display: flex; flex-direction: column; gap: 10px; }
+.hud-main { display: flex; flex-direction: column; gap: var(--sp-3); position: relative; min-width: 0; }
+.hud-card {
+  border: 1px solid var(--c-line); border-radius: var(--r-btn);
+  background: var(--c-glass); padding: 10px 12px;
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+}
+.hud-cap { font-size: var(--fs-xs); color: var(--c-dim); letter-spacing: 0.04em; }
+.hud-card .bar { height: 4px; margin-top: 4px; }
+.minimap .mm-region + .mm-region { margin-top: 7px; }
+.mm-dot {
+  display: inline-grid; place-items: center; width: 22px; height: 22px;
+  border-radius: 8px; border: 1px solid var(--c-line); background: rgba(20, 31, 51, 0.7);
+  font-size: 12px; line-height: 1;
+}
+.mm-dot.here { border-color: var(--c-mind); box-shadow: 0 0 0 2px var(--c-mind-soft); }
+/* 快捷按钮组默认不显示，横屏才浮出来 */
+.hud-actions { display: none; }
+@media (orientation: landscape) and (max-height: 560px) {
+  .hud-page { display: grid; grid-template-columns: 206px minmax(0, 1fr); gap: 10px; align-items: start; }
+  .hud-side { order: 0; }
+  .hud-main { grid-column: 2; }
+  /* 中央场景按 16:9 铺满可视高度并居中——保持 16:9 是为了让节点百分比坐标仍然对准美术图 */
+  .hud-main > .scene {
+    height: min(66vh, 300px); width: auto; aspect-ratio: 16 / 9;
+    margin-left: auto; margin-right: auto;
+  }
+  .hud-actions {
+    display: flex; flex-direction: column; gap: 8px;
+    /* 必须用 fixed：正文区是内部滚动容器，absolute 会把它钉到整页内容的最底部（屏幕上根本看不到） */
+    position: fixed; right: 12px; bottom: calc(var(--nav-h) + var(--safe-b) + 12px); z-index: 6;
+  }
+  .hud-fab {
+    display: grid; place-items: center; gap: 1px; width: 54px; height: 54px;
+    border-radius: 50%; border: 1px solid var(--c-line-2);
+    background: rgba(8, 13, 24, 0.78); color: var(--c-text); cursor: pointer;
+    -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+    box-shadow: var(--shadow-2); transition: transform var(--t-fast) var(--ease);
+  }
+  .hud-fab .ic { font-size: 17px; line-height: 1; }
+  .hud-fab .lb { font-size: 10px; color: var(--c-text-2); }
+  .hud-fab:active { transform: scale(0.96); }
+}

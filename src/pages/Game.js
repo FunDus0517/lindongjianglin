@@ -6,7 +6,7 @@
 import { h } from '../core/dom.js';
 import { btn, card, empty, logItem, modal, progress, sectionTitle, tag } from '../ui/components.js';
 import { statGrid } from '../ui/shell.js';
-import { sceneView } from '../ui/scene.js';
+import { sceneView, hudSide, hudActions } from '../ui/scene.js';
 import { fmtDuration } from '../core/util.js';
 import { capacity, countCategory, used } from '../systems/Inventory.js';
 import { condition } from '../systems/Survival.js';
@@ -72,7 +72,12 @@ export function Game(ctx) {
     { icon: '💰', label: '货币', value: state.currency },
   ];
 
-  return h('div', { class: 'col' },
+  return h('div', { class: 'hud-page' },
+    // 左栏（设计稿整体布局图：角色信息 / 任务追踪 / 小地图）——横屏固定在场景左侧
+    hudSide(state, ctx),
+    h('div', { class: 'hud-main col' },
+      // 右下角快捷按钮组（建造 / 队伍 / 背包 / 更多），横屏悬浮在场景上
+      hudActions(ctx),
     // 新手引导（第 1—2 天、未看完时出现，可跳过）
     showTutorial
       ? card([
@@ -219,7 +224,7 @@ export function Game(ctx) {
     // 导航（PC 端侧栏之外的内容区快捷入口）
     h('div', { class: 'row wrap', style: { gap: '6px' } },
       recap(state).slice(-3).map((c) => tag(`第 ${c.day} 天 · ${c.title}`, c.day === state.day ? 'mind' : ''))),
-  );
+    ));
 }
 
 export default Game;
