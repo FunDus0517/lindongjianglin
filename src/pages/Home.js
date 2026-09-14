@@ -1,16 +1,18 @@
 /**
- * 首页与启动页（项目书 §19.1、附录C 启动页 / 首页 / 新游戏确认页 / 历史记录页）。
+ * 启动页（V3.0 §七 · UI 重做规范 §三.7）。
+ * 按设计稿：雪原背景 + 大标题「末日之下 守护希望」+ 副标题 + 主按钮，
+ * 下方是存档信息、世界阶段与第一阶段回顾入口。
+ * 文案契约保持不变（开始生存 / 继续生存 / 载入记录），测试与引导流程都依赖它。
  * @module pages/Home
  */
 import { h } from '../core/dom.js';
 import { btn, card, confirmDanger, modal, sectionTitle, tag } from '../ui/components.js';
-import { PHASES, chapterOf, phaseOf } from '../data/chapters.js';
-import { CHAPTERS } from '../data/chapters.js';
+import { PHASES, chapterOf, phaseOf, CHAPTERS } from '../data/chapters.js';
 import { CONTENT_DAYS, completedMilestone, milestoneById } from '../systems/Story.js';
+import { LABEL as BUILD_LABEL } from '../data/build.js';
 import * as Save from '../systems/Save.js';
 import * as Weather from '../systems/Weather.js';
 import { fmtClock } from '../core/util.js';
-import { LABEL as BUILD_LABEL } from '../data/build.js';
 
 /** 世界阶段回顾弹窗（无限生存：阶段不会结束，只会改变世界状态）。 */
 function phaseReview(state, info) {
@@ -33,7 +35,7 @@ function phaseReview(state, info) {
   });
 }
 
-/** 章节回顾弹窗：第一阶段逐日，之后按阶段显示。 */
+/** 第一阶段回顾弹窗：逐日章节 + 里程碑。 */
 function chapterReview(state) {
   const reached = state?.day ?? 1;
   const done = completedMilestone(reached) ?? milestoneById('M1');
@@ -62,29 +64,27 @@ export function Home(ctx) {
   const w = info ? Weather.weather(info.weather) : null;
   const temp = info ? Weather.ambient(info) : null;
 
-  return h('div', { class: 'col', style: { paddingTop: '5vh' } },
-    h('div', { class: 'col', style: { gap: '6px', marginBottom: '24px' } },
-      h('div', { class: 'hero-logo' }, '凛冬降临'),
-      h('div', { class: 'hero-sub' }, 'FROSTFALL · 无限生存'),
+  return h('div', { class: 'col hero-page' },
+    // ── 标题区（设计稿：大标题 + 副标题 + 主按钮 + 当前世界状态）
+    h('div', { class: 'hero-block' },
+      h('div', { class: 'hero-kicker' }, '凛冬降临'),
+      h('div', { class: 'hero-title' }, '末日之下'),
+      h('div', { class: 'hero-title hero-title-2' }, '守护希望'),
+      h('div', { class: 'hero-line' }, '— 冰寒末日生存之旅 —'),
 
-      // 天气信息（方案 §七：启动界面要有天气）
       w
-        ? h('div', { class: 'row center', style: { gap: '10px', justifyContent: 'center', marginTop: '10px' } },
+        ? h('div', { class: 'row wrap', style: { gap: '8px', justifyContent: 'center', marginTop: '14px' } },
           tag(`${w.icon} ${w.name}`, 'mind'),
           tag(`${Math.round(temp)}℃`, ''),
           tag(`第 ${day} 天`, ''),
-          tag(`${phase.name}`, phase.id === 'P1' ? 'good' : phase.id === 'P2' ? 'warn' : 'bad'))
-        : tag('还没有开始。第一阶段的雪，比你记得的更大。', ''),
-    ),
+          tag(phase.name, phase.id === 'P1' ? 'good' : phase.id === 'P2' ? 'warn' : 'bad'))
+        : null,
 
-    card([
-      h('div', { class: 'narrative small muted' },
-        '六月十九日，下午四点零七分。\n冰雹砸穿城市，气温在两小时内跌了三十度。\n\n没有人来救你。你要做的是活下去，然后把这点活下去的东西，变成一座还能住人的地方。'),
-      h('div', { class: 'btn-group', style: { marginTop: '16px' } },
+      h('div', { class: 'hero-actions' },
         summary
-          ? btn('继续生存', { kind: 'primary', block: true, onClick: () => ctx.continueGame(), title: `第 ${summary.day} 天 · ${summary.chapter}` })
+          ? btn('继续生存', { kind: 'primary', block: true, onClick: () => ctx.continueGame() })
           : null,
-        btn(summary ? '新旅程（覆盖存档）' : '开始生存', {
+        btn(summary ? '新旅程' : '开始生存', {
           kind: summary ? '' : 'primary',
           block: true,
           onClick: () => {
@@ -99,10 +99,14 @@ export function Home(ctx) {
         }),
         btn('载入记录', { kind: 'ghost', block: true, onClick: () => (summary ? ctx.continueGame() : ctx.go('settings')) })),
       summary
-        ? h('div', { class: 'xs muted center', style: { marginTop: '10px' } },
-          `存档：第 ${summary.day} 天 ${info ? fmtClock(info.time) : ''} · ${summary.reason ?? '自动保存'}`)
-        : h('div', { class: 'xs muted center', style: { marginTop: '10px' } }, '尚无存档，将从第 1 天开始'),
-    ], { cls: 'mind' }),
+        ? h('div', { class: 'xs hero-save' }, `存档：第 ${summary.day} 天 ${info ? fmtClock(info.time) : ''} · ${summary.reason ?? '自动保存'}`)
+        : h('div', { class: 'xs hero-save' }, '还没有存档。第一阶段的雪，比你记得的更大。'),
+    ),
+
+    card([
+      h('div', { class: 'narrative small muted' },
+        '六月十九日，下午四点零七分。\n冰雹砸穿城市，气温在两小时内跌了三十度。\n\n没有人来救你。你要做的是活下去，然后把这点活下去的东西，变成一座还能住人的地方。'),
+    ], { cls: 'flat' }),
 
     sectionTitle('世界阶段', btn('阶段说明', { kind: 'ghost', sm: true, onClick: () => phaseReview(state, info) })),
     card(h('div', { class: 'col' }, PHASES.map((p) => h('div', { class: 'row between' },
@@ -115,9 +119,8 @@ export function Home(ctx) {
       c.day <= day ? tag('已走过', 'good') : tag('还没到')))), { cls: 'flat' }),
 
     card([
-      h('div', { class: 'small muted' }, '《凛冬降临》 无限生存构建'),
+      h('div', { class: 'small muted' }, '无限生存经营 · 剧情事件 · 基地成长'),
       h('div', { class: 'xs muted', style: { marginTop: '2px' } }, BUILD_LABEL),
-      h('div', { class: 'xs muted', style: { marginTop: '6px' } }, '无限生存经营 · 剧情事件 · 基地成长'),
       h('div', { class: 'btn-group', style: { marginTop: '12px' } },
         btn('系统设置', { kind: 'ghost', sm: true, onClick: () => ctx.go('settings') }),
         btn('历史记录', { kind: 'ghost', sm: true, onClick: () => ctx.go('game') })),

@@ -374,6 +374,24 @@ input.search { width: 100%; min-height: var(--touch); padding: 0 var(--sp-4); bo
   .hud-grid { grid-template-columns: repeat(6, 1fr); }
 }
 
+/* ---------- 启动页（UI 重做规范 §三.7） ----------
+   雪原标题区：大字号标题 + 细线副标题 + 居中主按钮，
+   标题用渐变文字与轻微上浮入场，整体受 reduced-motion 约束。 */
+.hero-page { padding-top: max(6vh, var(--safe-t)); }
+.hero-block { text-align: center; padding: 12px 0 4px; animation: textIn 460ms var(--ease) both; }
+.hero-kicker { color: var(--c-dim); letter-spacing: 0.44em; font-size: var(--fs-xs); margin-bottom: 10px; }
+.hero-title {
+  font-size: clamp(34px, 12vw, 52px);
+  font-weight: 300; letter-spacing: 0.18em; line-height: 1.18;
+  background: linear-gradient(180deg, #ffffff 0%, #a9d4ff 78%, #6f9fd8 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  text-shadow: 0 2px 24px rgba(120, 180, 255, 0.18);
+}
+.hero-title-2 { letter-spacing: 0.3em; }
+.hero-line { margin-top: 10px; color: var(--c-dim); letter-spacing: 0.16em; font-size: var(--fs-xs); }
+.hero-actions { display: flex; flex-direction: column; gap: 10px; margin: 20px auto 0; max-width: 22em; }
+.hero-save { margin-top: 10px; color: var(--c-dim); }
+
 /* ---------- 爽感反馈（V3.0 策划案 §十一） ----------
    事件正文渐显 + 资源数字飘出更"弹"。只动 transform / opacity，
    并且同样受两套 reduced-motion 规则约束。 */
