@@ -12,6 +12,7 @@ import { condition } from '../systems/Survival.js';
 import { band } from '../systems/Fame.js';
 import * as Achievement from '../systems/Achievement.js';
 import * as Assistant from '../systems/Assistant.js';
+import { LABEL as BUILD_LABEL } from '../data/build.js';
 import * as Base from '../systems/Base.js';
 import * as Daily from '../systems/Daily.js';
 import * as Death from '../systems/Death.js';

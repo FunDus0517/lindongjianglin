@@ -10,6 +10,7 @@ import { CONTENT_DAYS, completedMilestone, milestoneById } from '../systems/Stor
 import * as Save from '../systems/Save.js';
 import * as Weather from '../systems/Weather.js';
 import { fmtClock } from '../core/util.js';
+import { LABEL as BUILD_LABEL } from '../data/build.js';
 
 /** 世界阶段回顾弹窗（无限生存：阶段不会结束，只会改变世界状态）。 */
 function phaseReview(state, info) {
@@ -114,7 +115,8 @@ export function Home(ctx) {
       c.day <= day ? tag('已走过', 'good') : tag('还没到')))), { cls: 'flat' }),
 
     card([
-      h('div', { class: 'small muted' }, '《凛冬降临》 V3.1 项目 · 无限生存构建'),
+      h('div', { class: 'small muted' }, '《凛冬降临》 无限生存构建'),
+      h('div', { class: 'xs muted', style: { marginTop: '2px' } }, BUILD_LABEL),
       h('div', { class: 'xs muted', style: { marginTop: '6px' } }, '无限生存经营 · 剧情事件 · 基地成长'),
       h('div', { class: 'btn-group', style: { marginTop: '12px' } },
         btn('系统设置', { kind: 'ghost', sm: true, onClick: () => ctx.go('settings') }),
