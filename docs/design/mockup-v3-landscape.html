@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>凛冬降临 · UI 设计稿 v3（横屏 1536×1024）</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --panel:rgba(14,22,38,.92);--panel2:rgba(20,30,50,.86);
+    --line:rgba(120,170,255,.2);--txt:#e9eefb;--dim:#8b9ab3;
+    --ice:#4e8dfb;--ice2:#7cc4ff;--warm:#ff9d4d;--good:#5ee0a0;--bad:#ff6b7a;--gold:#ffd166;
+    --r:14px;
+  }
+  body{width:1536px;height:1024px;overflow:hidden;color:var(--txt);
+    font-family:"PingFang SC","Microsoft YaHei",-apple-system,sans-serif;
+    background:radial-gradient(1200px 700px at 50% 18%,#15243d 0%,#0a1220 55%,#060a12 100%);position:relative}
+
+  /* ── 顶部资源栏 ── */
+  .top{position:absolute;left:24px;right:24px;top:18px;height:64px;border-radius:16px;
+    background:var(--panel);border:1px solid var(--line);display:flex;align-items:center;gap:14px;padding:0 16px;
+    box-shadow:0 12px 30px rgba(0,0,0,.5)}
+  .avatar{width:44px;height:44px;border-radius:12px;background:linear-gradient(140deg,#2b4b8f,#152a52);
+    border:1px solid rgba(150,200,255,.4);display:flex;align-items:center;justify-content:center;font-size:22px}
+  .who .n{font-size:15px;font-weight:600}
+  .who .l{font-size:11px;color:var(--dim)}
+  .who .l em{font-style:normal;color:var(--gold)}
+  .xp{width:120px;height:6px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;margin-top:4px}
+  .xp i{display:block;height:100%;width:82%;background:linear-gradient(90deg,#4e8dfb,#7cc4ff)}
+  .res{display:flex;align-items:center;gap:6px;font-size:15px;font-variant-numeric:tabular-nums}
+  .res b{font-weight:600}
+  .res.low b{color:var(--bad)}
+  .res .plus{width:16px;height:16px;border-radius:5px;background:rgba(124,196,255,.18);color:var(--ice2);
+    font-size:12px;display:flex;align-items:center;justify-content:center}
+  .topright{margin-left:auto;display:flex;align-items:center;gap:12px;font-size:14px;font-variant-numeric:tabular-nums}
+  .wx{padding:5px 10px;border-radius:10px;background:rgba(124,196,255,.14);border:1px solid rgba(124,196,255,.35);color:var(--ice2);font-size:13px}
+  .gear{width:38px;height:38px;border-radius:11px;background:rgba(255,255,255,.07);border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:17px}
+
+  /* ── 左栏 ── */
+  .left{position:absolute;left:24px;top:96px;width:196px;display:flex;flex-direction:column;gap:10px}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 10px 26px rgba(0,0,0,.45)}
+  .func{display:flex;flex-direction:column;padding:8px}
+  .frow{display:flex;align-items:center;gap:10px;padding:9px 8px;border-radius:10px;font-size:14px}
+  .frow em{margin-left:auto;font-style:normal;font-size:11px;color:var(--bad)}
+  .me{padding:12px}
+  .row{display:flex;align-items:center;gap:10px}
+  .power{margin-top:10px;font-size:12px;color:var(--dim)}
+  .power b{display:block;font-size:19px;color:var(--gold);font-variant-numeric:tabular-nums}
+  .quest{padding:12px}
+  .qt{font-size:13px;font-weight:600;margin-bottom:8px}
+  .qi .t{font-size:12px}
+  .qi .p{font-size:11px;color:var(--dim);margin-top:2px}
+  .bar{height:5px;border-radius:3px;background:rgba(255,255,255,.12);margin-top:5px;overflow:hidden}
+  .bar i{display:block;height:100%;background:linear-gradient(90deg,#4e8dfb,#7cc4ff)}
+  /* 小地图：缩小圆图 + 固定高度，避免撑破面板 */
+  .map{padding:10px;display:flex;flex-direction:column;align-items:center;gap:8px}
+  .circle{width:118px;height:118px;border-radius:50%;border:1px solid var(--line);position:relative;overflow:hidden;
+    background:radial-gradient(circle at 50% 45%,rgba(96,156,236,.3),rgba(9,15,28,.95) 72%)}
+  .circle .grid{position:absolute;inset:0;background:
+    linear-gradient(rgba(124,196,255,.09) 1px,transparent 1px) 0 0/24px 24px,
+    linear-gradient(90deg,rgba(124,196,255,.09) 1px,transparent 1px) 0 0/24px 24px}
+  .circle .me2{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:15px}
+  .circle .nd{position:absolute;width:8px;height:8px;border-radius:50%;background:var(--ice2);box-shadow:0 0 8px rgba(124,196,255,.9)}
+  .mapbtns{display:flex;gap:6px;width:100%}
+  .mini{flex:1;text-align:center;font-size:11px;padding:6px 0;border-radius:9px;background:rgba(255,255,255,.07);
+    border:1px solid var(--line);color:var(--dim)}
+
+  /* ── 中央基地场景（亮色雪地） ── */
+  .scene{position:absolute;left:232px;right:24px;top:96px;height:656px;border-radius:20px;overflow:hidden;
+    border:1px solid rgba(150,200,255,.28);
+    background:linear-gradient(180deg,#e8f1fa 0%,#d3e2f0 42%,#bcd0e4 74%,#a9c2da 100%)}
+  /* 雪地起伏与车辙 */
+  .drift{position:absolute;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.95),rgba(255,255,255,0) 70%)}
+  .path{position:absolute;background:linear-gradient(180deg,rgba(160,180,200,.5),rgba(150,172,196,.32));border-radius:40px}
+  .tracks{position:absolute;height:3px;background:rgba(120,145,175,.35);border-radius:2px}
+  /* 树 */
+  .tree{position:absolute;width:0;height:0}
+  .tree i{position:absolute;width:0;height:0;border-style:solid;
+    border-color:transparent transparent #2f5a52 transparent}
+  .tree s{position:absolute;width:6px;background:#5b4630;text-decoration:none;display:block}
+  /* 建筑：三面体 + 积雪顶 + 暖光窗 */
+  .bld{position:absolute}
+  .bld .body{position:absolute;inset:0;border-radius:8px;
+    background:linear-gradient(170deg,#3c5478 0%,#2a3d5e 55%,#1f2f4a 100%);
+    border:1px solid rgba(120,150,190,.5);box-shadow:0 12px 22px rgba(60,90,130,.35),0 2px 0 rgba(255,255,255,.5)}
+  .bld .snow{position:absolute;left:-5px;right:-5px;top:-7px;height:12px;border-radius:7px;
+    background:linear-gradient(180deg,#ffffff,#dfeaf6);box-shadow:0 2px 6px rgba(120,150,190,.35)}
+  .bld .win{position:absolute;width:10px;height:12px;border-radius:2px;background:#ffc978;
+    box-shadow:0 0 8px rgba(255,190,110,.95)}
+  .bld .door{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:16px;height:20px;border-radius:3px 3px 0 0;
+    background:linear-gradient(180deg,#ffd79a,#e8a24e);box-shadow:0 0 12px rgba(255,190,110,.8)}
+  .bld.hi .body{border-color:rgba(90,170,255,.95);box-shadow:0 0 0 3px rgba(90,170,255,.4),0 14px 26px rgba(60,90,130,.4)}
+  /* 围墙 */
+  .wall{position:absolute;height:16px;border-radius:6px;background:linear-gradient(180deg,#f2f7fc,#cddbe9);
+    border:1px solid rgba(150,180,210,.7);box-shadow:0 6px 12px rgba(90,120,155,.25)}
+  /* 篝火 */
+  .fire{position:absolute;width:26px;height:26px;border-radius:50%;
+    background:radial-gradient(circle,#fff0c4 0%,#ffb85c 38%,rgba(255,140,60,.15) 70%,transparent 74%);
+    box-shadow:0 0 60px 26px rgba(255,170,90,.45)}
+  /* 标签与进度 */
+  .tag{position:absolute;transform:translate(-50%,0);padding:4px 10px;border-radius:10px;font-size:12px;
+    background:rgba(10,17,29,.9);border:1px solid rgba(120,170,255,.28);white-space:nowrap;color:#eaf2ff}
+  .tag i{font-style:normal;color:var(--gold);margin-left:5px}
+  .ring{position:absolute;transform:translate(-50%,0);width:96px;height:6px;border-radius:3px;background:rgba(10,20,35,.35)}
+  .ring i{display:block;height:100%;width:64%;border-radius:3px;background:linear-gradient(90deg,#4e8dfb,#7cc4ff)}
+  .ringtxt{position:absolute;font-size:11px;color:#123;font-weight:600;text-shadow:0 1px 0 rgba(255,255,255,.6)}
+
+  /* 右上快捷 / 右下圆钮 */
+  .quickbar{position:absolute;right:22px;top:22px;display:flex;flex-direction:column;gap:8px}
+  .qbi{width:52px;height:52px;border-radius:14px;background:var(--panel2);border:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:17px}
+  .qbi span{font-size:9px;color:var(--dim)}
+  .quick{position:absolute;right:22px;bottom:22px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .qb{width:74px;height:74px;border-radius:50%;background:linear-gradient(160deg,#243a5e,#15243c);
+    border:1px solid rgba(180,215,255,.5);display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:2px;font-size:22px;box-shadow:0 10px 24px rgba(40,70,110,.45)}
+  .qb span{font-size:11px;color:#cfe0f5}
+  .qb.main{background:linear-gradient(160deg,#4b83e6,#25509a);border-color:rgba(210,232,255,.7);box-shadow:0 12px 28px rgba(50,110,215,.5)}
+
+  /* ── 底部界面条 ── */
+  .bottom{position:absolute;left:24px;right:24px;bottom:74px;height:186px;display:flex;gap:14px}
+  .bcard{flex:1;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;
+    box-shadow:0 10px 26px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:8px;overflow:hidden}
+  .bt{font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:space-between}
+  .chip{padding:3px 8px;border-radius:8px;font-size:10px;background:rgba(255,255,255,.07);border:1px solid var(--line);color:var(--dim)}
+  .chip.mind{color:var(--ice2);border-color:rgba(124,196,255,.4)}
+  .tabs{display:flex;gap:6px}
+  .grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+  .item{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:10px;height:54px;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:17px;position:relative}
+  .item span{font-size:9px;color:var(--dim)}
+  .item em{position:absolute;right:4px;bottom:2px;font-style:normal;font-size:9px;color:var(--ice2)}
+  .need{font-size:11px;display:flex;justify-content:space-between;color:var(--dim)}
+  .need b{color:var(--good);font-variant-numeric:tabular-nums}
+  .need b.no{color:var(--bad)}
+  .btnrow{display:flex;gap:8px;margin-top:auto}
+  .btn{flex:1;text-align:center;font-size:12px;font-weight:600;padding:8px 0;border-radius:10px}
+  .btn.g{background:rgba(255,255,255,.07);border:1px solid var(--line);color:var(--txt)}
+  .btn.p{background:linear-gradient(160deg,#4e8dfb,#2f63c8);box-shadow:0 6px 16px rgba(60,120,230,.35)}
+  .hero{display:flex;gap:10px;align-items:center}
+  .portrait{width:64px;height:74px;border-radius:10px;background:linear-gradient(160deg,#33507f,#1a2b4a);
+    border:1px solid rgba(150,200,255,.35);display:flex;align-items:center;justify-content:center;font-size:30px}
+  .attr{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:11px;color:var(--dim)}
+  .attr b{color:var(--txt);font-variant-numeric:tabular-nums}
+  .slider{height:5px;border-radius:3px;background:rgba(255,255,255,.12);position:relative;flex:1}
+  .slider i{position:absolute;left:0;top:0;height:100%;width:68%;border-radius:3px;background:linear-gradient(90deg,#4e8dfb,#7cc4ff)}
+  .slider em{position:absolute;right:-2px;top:-4px;width:13px;height:13px;border-radius:50%;background:#dceaff}
+
+  .legend{position:absolute;left:24px;right:24px;bottom:18px;height:44px;border-radius:12px;
+    background:rgba(12,20,34,.78);border:1px solid var(--line);display:flex;align-items:center;
+    gap:26px;padding:0 18px;font-size:12px;color:var(--dim)}
+  .legend b{color:var(--txt);font-weight:600;margin-right:6px}
+  .legend .dot{width:7px;height:7px;border-radius:50%;background:var(--ice2);display:inline-block;margin-right:8px}
+</style>
+</head>
+<body>
+  <!-- 顶部资源栏 -->
+  <div class="top">
+    <div class="avatar">🧣</div>
+    <div class="who">
+      <div class="n">玩家昵称</div>
+      <div class="l">Lv.<em>12</em> · 极寒降临 · 第 12 天</div>
+      <div class="xp"><i></i></div>
+    </div>
+    <div class="res" style="margin-left:26px">🪵 <b>12.5万</b> <span class="plus">+</span></div>
+    <div class="res">🪨 <b>8.7万</b> <span class="plus">+</span></div>
+    <div class="res">🍖 <b>6.3万</b> <span class="plus">+</span></div>
+    <div class="res low">💧 <b>4.2万</b> <span class="plus">+</span></div>
+    <div class="res">💎 <b>1250</b> <span class="plus">+</span></div>
+    <div class="topright">⏱ 16:32 <span class="wx">❄ −18.4℃ 暴雪</span> <span class="gear">⚙</span></div>
+  </div>
+
+  <!-- 左栏 -->
+  <div class="left">
+    <div class="panel func">
+      <div class="frow">📜 任务 <em>2</em></div>
+      <div class="frow">✉️ 邮件 <em>1</em></div>
+      <div class="frow">🧑‍🤝‍🧑 好友</div>
+    </div>
+    <div class="panel me">
+      <div class="row">
+        <div class="avatar" style="width:38px;height:38px;font-size:18px">🧣</div>
+        <div>
+          <div style="font-size:14px;font-weight:600">玩家昵称</div>
+          <div style="font-size:11px;color:var(--dim)">Lv.12 · 基地负责人</div>
+        </div>
+      </div>
+      <div class="power">战力<b>84217003</b></div>
+    </div>
+    <div class="panel quest">
+      <div class="qt">任务追踪</div>
+      <div class="qi" style="margin-bottom:10px">
+        <div class="t">主线：升级指挥中心 Lv.5</div>
+        <div class="p">4 / 5 · 奖励 🪵×500 💎×20</div>
+        <div class="bar"><i style="width:80%"></i></div>
+      </div>
+      <div class="qi">
+        <div class="t">支线：收集 20 个木材</div>
+        <div class="p">12 / 20 · 奖励 🍖×200</div>
+        <div class="bar"><i style="width:60%"></i></div>
+      </div>
+    </div>
+    <div class="panel map">
+      <div class="circle">
+        <div class="grid"></div>
+        <div class="me2">🏠</div>
+        <div class="nd" style="left:26px;top:30px"></div>
+        <div class="nd" style="left:82px;top:44px;background:#5ee0a0;box-shadow:0 0 8px rgba(94,224,160,.9)"></div>
+        <div class="nd" style="left:44px;top:82px;background:#ffd166;box-shadow:0 0 8px rgba(255,209,102,.9)"></div>
+      </div>
+      <div class="mapbtns"><div class="mini">全屏</div><div class="mini">返回</div></div>
+    </div>
+  </div>
+
+  <!-- 中央基地场景 -->
+  <div class="scene">
+    <!-- 雪地起伏 -->
+    <div class="drift" style="left:80px;top:60px;width:420px;height:220px"></div>
+    <div class="drift" style="left:520px;top:400px;width:520px;height:260px"></div>
+    <div class="drift" style="left:180px;top:390px;width:360px;height:240px;opacity:.7"></div>
+    <!-- 道路 -->
+    <div class="path" style="left:150px;top:520px;width:900px;height:44px"></div>
+    <div class="path" style="left:600px;top:250px;width:40px;height:320px"></div>
+    <div class="tracks" style="left:200px;top:534px;width:180px"></div>
+    <div class="tracks" style="left:410px;top:548px;width:220px"></div>
+    <!-- 树 -->
+    <div class="tree" style="left:70px;top:280px"><i style="border-width:0 22px 46px 22px;left:-22px;top:0"></i><i style="border-width:0 28px 54px 28px;left:-28px;top:26px"></i><s style="left:-3px;top:74px;height:12px"></s></div>
+    <div class="tree" style="left:1010px;top:200px"><i style="border-width:0 20px 42px 20px;left:-20px;top:0"></i><i style="border-width:0 26px 50px 26px;left:-26px;top:24px"></i><s style="left:-3px;top:68px;height:12px"></s></div>
+    <div class="tree" style="left:1075px;top:250px"><i style="border-width:0 16px 34px 16px;left:-16px;top:0"></i><i style="border-width:0 21px 40px 21px;left:-21px;top:20px"></i><s style="left:-3px;top:56px;height:10px"></s></div>
+    <div class="tree" style="left:110px;top:180px"><i style="border-width:0 17px 36px 17px;left:-17px;top:0"></i><i style="border-width:0 22px 42px 22px;left:-22px;top:20px"></i><s style="left:-3px;top:58px;height:10px"></s></div>
+    <!-- 围墙 -->
+    <div class="wall" style="left:120px;top:150px;width:280px"></div>
+    <div class="wall" style="left:640px;top:150px;width:300px"></div>
+    <div class="wall" style="left:120px;top:596px;width:230px"></div>
+    <div class="wall" style="left:700px;top:596px;width:240px"></div>
+
+    <!-- 建筑 -->
+    <div class="bld" style="left:470px;top:250px;width:190px;height:140px">
+      <div class="body"></div><div class="snow"></div>
+      <div class="win" style="left:26px;top:34px"></div><div class="win" style="left:52px;top:34px"></div>
+      <div class="win" style="left:104px;top:34px"></div><div class="win" style="left:130px;top:34px"></div>
+      <div class="win" style="left:26px;top:66px"></div><div class="win" style="left:130px;top:66px"></div>
+      <div class="door"></div>
+    </div>
+    <div class="bld" style="left:180px;top:180px;width:130px;height:96px">
+      <div class="body"></div><div class="snow"></div>
+      <div class="win" style="left:20px;top:26px"></div><div class="win" style="left:88px;top:26px"></div>
+      <div class="door" style="height:16px"></div>
+    </div>
+    <div class="bld" style="left:760px;top:168px;width:140px;height:104px">
+      <div class="body"></div><div class="snow"></div>
+      <div class="win" style="left:22px;top:28px"></div><div class="win" style="left:56px;top:28px"></div>
+      <div class="win" style="left:98px;top:28px"></div>
+      <div class="door" style="height:16px"></div>
+    </div>
+    <div class="bld hi" style="left:470px;top:452px;width:150px;height:104px">
+      <div class="body"></div><div class="snow"></div>
+      <div class="win" style="left:24px;top:28px"></div><div class="win" style="left:104px;top:28px"></div>
+      <div class="door" style="height:16px"></div>
+    </div>
+    <div class="bld" style="left:180px;top:430px;width:132px;height:98px">
+      <div class="body"></div><div class="snow"></div>
+      <div class="win" style="left:22px;top:26px"></div><div class="win" style="left:88px;top:26px"></div>
+      <div class="door" style="height:16px"></div>
+    </div>
+    <div class="bld" style="left:760px;top:446px;width:150px;height:104px">
+      <div class="body"></div><div class="snow"></div>
+      <div class="win" style="left:24px;top:28px"></div><div class="win" style="left:62px;top:28px"></div>
+      <div class="win" style="left:104px;top:28px"></div>
+      <div class="door" style="height:16px"></div>
+    </div>
+    <!-- 农田（浅色条垄） -->
+    <div style="position:absolute;left:900px;top:430px;width:180px;height:120px;border-radius:10px;
+      background:repeating-linear-gradient(180deg,rgba(255,255,255,.85) 0 10px,rgba(196,214,232,.75) 10px 20px);
+      border:1px solid rgba(150,180,210,.7);box-shadow:0 8px 18px rgba(90,120,155,.22)"></div>
+
+    <!-- 篝火 -->
+    <div class="fire" style="left:600px;top:404px"></div>
+
+    <!-- 标签 -->
+    <div class="tag" style="left:565px;top:220px">指挥中心<i>Lv.4</i></div>
+    <div class="tag" style="left:245px;top:150px">仓库<i>Lv.3</i></div>
+    <div class="tag" style="left:830px;top:138px">发电站<i>Lv.4</i></div>
+    <div class="tag" style="left:246px;top:400px">伐木场<i>Lv.2</i></div>
+    <div class="tag" style="left:835px;top:416px">温室<i>Lv.3</i></div>
+    <div class="tag" style="left:545px;top:422px">居民楼<i>Lv.2</i></div>
+    <div class="tag" style="left:990px;top:400px">农田<i>Lv.3</i></div>
+
+    <div class="ring" style="left:830px;top:206px"><i></i></div>
+    <div class="ringtxt" style="left:786px;top:200px">升级中 00:12:30</div>
+
+    <div class="quickbar">
+      <div class="qbi">✉️<span>邮件</span></div>
+      <div class="qbi">🎒<span>背包</span></div>
+      <div class="qbi">⚙️<span>设置</span></div>
+      <div class="qbi">⋯<span>更多</span></div>
+    </div>
+    <div class="quick">
+      <div class="qb main">🔨<span>建造</span></div>
+      <div class="qb">🎖️<span>英雄</span></div>
+      <div class="qb">🎒<span>背包</span></div>
+      <div class="qb">⋯<span>更多</span></div>
+    </div>
+  </div>
+
+  <!-- 底部界面条 -->
+  <div class="bottom">
+    <div class="bcard">
+      <div class="bt">建造界面 <span class="chip">可建造 2/3</span></div>
+      <div class="tabs"><span class="chip mind">资源</span><span class="chip">生产</span><span class="chip">功能</span><span class="chip">装扮</span></div>
+      <div class="need"><span>木材工坊 Lv.1</span><b>🪵300 🪨200</b></div>
+      <div class="need"><span>温室 Lv.1</span><b class="no">🪵400 🧱500</b></div>
+      <div class="btnrow"><div class="btn g">详情</div><div class="btn p">建造</div></div>
+    </div>
+    <div class="bcard">
+      <div class="bt">英雄界面 <span class="chip mind">战力 1520</span></div>
+      <div class="hero">
+        <div class="portrait">🧑‍🚀</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600">林晚 <span style="color:var(--dim);font-size:11px">Lv.12 医疗负责人</span></div>
+          <div class="attr" style="margin-top:6px">
+            <div>健康 <b>92</b></div><div>战力 <b>1520</b></div>
+            <div>防护 <b>38</b></div><div>效率 <b>1.35×</b></div>
+          </div>
+        </div>
+      </div>
+      <div class="btnrow"><div class="btn g">属性</div><div class="btn g">装备</div><div class="btn p">编队</div></div>
+    </div>
+    <div class="bcard">
+      <div class="bt">背包界面 <span class="chip">76 / 100</span></div>
+      <div class="grid5">
+        <div class="item">🪵<span>木材</span><em>120</em></div>
+        <div class="item">🪨<span>石材</span><em>86</em></div>
+        <div class="item">🍖<span>食物</span><em>42</em></div>
+        <div class="item">💧<span>饮水</span><em>55</em></div>
+        <div class="item">🔩<span>零件</span><em>18</em></div>
+      </div>
+      <div class="btnrow"><div class="btn g">批量使用</div><div class="btn g">一键出售</div><div class="btn p">整理</div></div>
+    </div>
+    <div class="bcard">
+      <div class="bt">设置界面 <span class="chip">基础设置</span></div>
+      <div style="display:flex;flex-direction:column;gap:9px;font-size:12px">
+        <div style="display:flex;align-items:center;gap:10px"><span style="width:42px;color:var(--dim)">音乐</span><div class="slider"><i></i><em></em></div></div>
+        <div style="display:flex;align-items:center;gap:10px"><span style="width:42px;color:var(--dim)">音效</span><div class="slider"><i style="width:88%"></i><em style="left:86%"></em></div></div>
+        <div style="display:flex;align-items:center;gap:10px"><span style="width:42px;color:var(--dim)">震动</span><div class="slider"><i style="width:100%"></i><em style="left:98%"></em></div></div>
+        <div style="display:flex;align-items:center;gap:10px"><span style="width:42px;color:var(--dim)">画质</span><div class="slider"><i style="width:72%"></i><em style="left:70%"></em></div></div>
+      </div>
+      <div class="btnrow"><div class="btn g">退出登录</div></div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot"></span><b>界面风格</b>简洁、现代、沉浸式</span>
+    <span><span class="dot"></span><b>操作逻辑</b>点击明确、反馈及时、流程顺畅</span>
+    <span><span class="dot"></span><b>交互体验</b>符合系统设计规范 · 支持手势操作</span>
+    <span><span class="dot"></span><b>整体目标</b>快速上手、轻松管理基地、享受生存与建设的乐趣</span>
+  </div>
+</body>
+</html>
