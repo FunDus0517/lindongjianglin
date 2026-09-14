@@ -309,49 +309,34 @@ test('人物：交谈每天首次才涨好感，压力事件可被触发', () =>
   assert.ok(Event.event('laozhou_breakdown'), '压力事件必须真实存在');
 });
 
-test('剧情：开场事件按顺序排队，里程碑边界跟随开发范围推进', () => {
+test('剧情：只有开场按顺序排队，其余剧情到日子后进随机池（不再有固定排期）', () => {
   const s = fresh();
   Story.begin(s);
   assert.deepEqual(s.queue, ['d1_hail', 'd1_blackout', 'd1_mind_bind']);
   const first = Event.nextQueued(s);
   assert.equal(first, 'd1_hail');
 
+  // 第 3 天之后：onNewDay 不再往队列里塞剧本（剧情改为"到日子后进随机池"）
   s.day = 3;
+  const before = s.queue.length;
   Story.onNewDay(s);
-  assert.ok(s.queue.includes('d3_raider_ambush'));
+  assert.equal(s.queue.length, before, 'onNewDay 不该再排入固定剧情');
+  assert.equal(Story.minDayOf('d3_raider_ambush'), 3, '第 3 天的剧情要到第 3 天才可能出现');
+  assert.equal(Story.minDayOf('d30_dawn'), 30, '第 30 天的剧情要到第 30 天才解锁');
 
   s.day = 4;
   Story.onNewDay(s);
-  assert.equal(s.milestone, null, '第 4 天属于 M2 开发范围内，不应弹出里程碑结算');
-
-  s.day = 10;
-  Story.onNewDay(s);
-  assert.equal(s.milestone, null);
-  assert.ok(s.queue.includes('d10_cold_snap'), '第 10 天必须排入强寒潮剧情');
-
-  s.day = 11;
-  Story.onNewDay(s);
-  assert.equal(s.milestone, null, '第 11 天属于 M3 开发范围内');
-  assert.ok(s.queue.includes('d11_board_open'), '第 11 天必须排入战力榜剧情');
+  assert.equal(s.milestone, null, '第 4 天属于第一阶段内，不应弹出里程碑结算');
 
   s.day = 20;
   Story.onNewDay(s);
   assert.equal(s.milestone, null);
-  assert.ok(s.queue.includes('d20_prep'), '第 20 天必须排入终局前夜剧情');
-
-  s.day = 21;
-  Story.onNewDay(s);
-  assert.equal(s.milestone, null, '第 21 天属于 M4 开发范围内');
-  assert.ok(s.queue.includes('d21_market_open'), '第 21 天必须排入交易区剧情');
-
-  s.day = 30;
-  Story.onNewDay(s);
-  assert.equal(s.milestone, null);
-  assert.ok(s.queue.includes('d30_dawn'), '第 30 天必须排入黎明结算剧情');
+  assert.equal(Story.minDayOf('d20_prep'), 20);
 
   s.day = 31;
   Story.onNewDay(s);
-  assert.equal(s.milestone, 'M4', '第 31 天应结算 M4 里程碑');
+  assert.equal(s.milestone, 'M4', '第 31 天应结算第一阶段里程碑');
+  assert.equal(s.phase, 'P2', '第 31 天世界进入第二阶段');
 });
 
 test('仓库：容量上限只约束新增，消耗材料永远不被容量拒绝', () => {

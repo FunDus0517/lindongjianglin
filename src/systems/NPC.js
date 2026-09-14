@@ -6,6 +6,7 @@
  * @module systems/NPC
  */
 import { CHARACTERS, CHARACTER_LIST, bandOf, character } from '../data/characters.js';
+import { DEATH_AFTER_INJURED_DAYS, INJURY_DAYS, STATUS, XP_PER_ROLE, ladderFor, roleAt } from '../data/crew.js';
 import { lineFor } from '../data/dialogue.js';
 import { clamp } from '../core/util.js';
 
@@ -32,6 +33,11 @@ export function change(state, id, deltas = {}) {
       const lo = NON_NEGATIVE.has(k) ? 0 : -100;
       r[k] = clamp((r[k] ?? 0) + deltas[k], lo, 100);
     }
+  }
+  // 受伤是"设定"不是"累加"：事件里写 injured: 2 表示受伤两天（方案 §五）
+  if (deltas.injured !== undefined) {
+    r.injured = Math.max(0, Math.round(deltas.injured));
+    r.hurtDays = 0;
   }
   r.met = true;
   return r;
@@ -266,6 +272,99 @@ export function relationshipDrift(state) {
     }
   }
   return { notes, changes };
+}
+
+/**
+ * 每日幸存者成长（无限生存方案 §五）。
+ * NPC 会成长、转职、受伤、死亡、离开或投靠别的势力 —— 都不设固定结局。
+ *
+ * 刻意**不消耗随机数**：触发条件全部是确定性的（每 N 天、防御等级、库存药品、冲突值）。
+ * 理由见 Weather.roll 的注释：rngCursor 的推进量一变，整局随机序列会全部错位。
+ */
+export function growCrew(state) {
+  const notes = [];
+  const total = Object.values(state.base ?? {}).reduce((a, b) => a + (b ?? 0), 0);
+  const defense = state.base?.defense ?? 0;
+  const hasMedicine = (state.inventory?.medicine ?? 0) > 0;
+
+  for (const c of active(state)) {
+    const r = rel(state, c.id);
+    if (!r || !r.met) continue;
+    r.alive = r.alive !== false;
+    r.left = r.left === true;
+    r.role = r.role ?? ladderFor(c.id)[0];
+    r.crewXp = r.crewXp ?? 0;
+    r.injured = r.injured ?? 0;
+    if (!r.alive || r.left || r.joinFaction) continue;
+
+    // 1) 受伤：每天推进；有药等于在治疗（扣掉一天累计）
+    if (r.injured > 0) {
+      r.injured -= 1;
+      r.hurtDays = (r.hurtDays ?? 0) + 1;
+      r.stress = clamp((r.stress ?? 0) + 2, 0, 100);
+      if (hasMedicine) r.hurtDays = Math.max(0, r.hurtDays - 1);
+      if (r.hurtDays >= DEATH_AFTER_INJURED_DAYS) {
+        r.alive = false;
+        state.aid.morale = clamp((state.aid?.morale ?? 0) - 15, 0, 100);
+        state.aid.joined = (state.aid.joined ?? []).filter((x) => x !== c.id);
+        state.aid.members = Math.max(0, (state.aid.members ?? 0) - 1);
+        state.flags[`death_${c.id}`] = true;
+        notes.push(`${c.name}伤上加伤，没能撑过去。你们把他埋在楼下那棵树下。`);
+        continue;
+      }
+      if (r.injured === 0) { notes.push(`${c.name}的伤好了，重新开始干活。`); r.hurtDays = 0; }
+      continue;   // 受伤期间不参与成长与产出
+    }
+
+    // 2) 成长与转职：基地越大，能学的东西越多
+    r.crewXp += 1 + Math.floor(total / 12);
+    const role = roleAt(c.id, r.crewXp);
+    if (role !== r.role) {
+      r.role = role;
+      r.stress = clamp((r.stress ?? 0) - 5, 0, 100);
+      notes.push(`${c.name}现在是${role}。`);
+      if (r.crewXp >= XP_PER_ROLE * 3) state.flags[`veteran_${c.id}`] = true;
+    }
+
+    // 3) 受伤：基地防御不足时每隔几天出事（确定性）
+    const every = defense >= 4 ? 12 : defense >= 2 ? 8 : 5;
+    if (state.day % every === 0 && (r.stress ?? 0) > 45) {
+      r.injured = INJURY_DAYS;
+      r.hurtDays = 0;
+      r.stress = clamp((r.stress ?? 0) + 8, 0, 100);
+      notes.push(`${c.name}在外面受了伤，得养几天。`);
+      continue;
+    }
+
+    // 4) 离开 / 投靠别的势力：冲突高、士气低的时候会走
+    const conflict = r.conflict ?? 0;
+    if (conflict >= CONFLICT_LEAVE) {
+      r.left = true;
+      state.aid.joined = (state.aid.joined ?? []).filter((x) => x !== c.id);
+      state.aid.members = Math.max(0, (state.aid.members ?? 0) - 1);
+      state.aid.morale = clamp((state.aid?.morale ?? 0) - 8, 0, 100);
+      notes.push(`${c.name}收拾东西走了。他说这里已经不像个能过日子的地方。`);
+      continue;
+    }
+    if ((state.aid?.morale ?? 100) < 15 && (r.loyalty ?? 0) < 10 && state.day % 6 === 0) {
+      r.joinFaction = state.factions?.lindong?.standing >= state.factions?.raiders?.standing ? 'lindong' : 'raiders';
+      state.aid.joined = (state.aid.joined ?? []).filter((x) => x !== c.id);
+      state.aid.members = Math.max(0, (state.aid.members ?? 0) - 1);
+      notes.push(`${c.name}投奔了${r.joinFaction === 'lindong' ? '凛冬城' : '掠夺者'}。`);
+    }
+  }
+  return notes;
+}
+
+/** 幸存者状态标签（界面用）。 */
+export function statusOf(state, id) {
+  const r = rel(state, id);
+  if (!r) return STATUS.left;
+  if (r.alive === false) return STATUS.dead;
+  if (r.left) return STATUS.left;
+  if (r.joinFaction) return STATUS.joined;
+  if ((r.injured ?? 0) > 0) return STATUS.injured;
+  return STATUS.active;
 }
 
 export { CHARACTERS, character };

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * 基地与设施管理页（项目书 §10、附录C 基地/设施管理页）。
  * 设施等级制、升级消耗与效果预览、加工设施配方。
  * @module pages/Base
@@ -8,16 +8,39 @@ import { btn, card, empty, progress, sectionTitle, sheet, tag } from '../ui/comp
 import { item } from '../data/items.js';
 import * as Base from '../systems/Base.js';
 import * as Inventory from '../systems/Inventory.js';
+import * as Tech from '../systems/Tech.js';
 
 const costText = (cost) => Object.entries(cost.items).map(([id, n]) => `${item(id).name}×${n}`).join('、');
 
+const techCostText = (cost) => {
+  const parts = [];
+  if (cost?.cores) parts.push(`晶核×${cost.cores}`);
+  if (cost?.blueprint) parts.push(`蓝图×${cost.blueprint}`);
+  return parts.join('、') || '免费';
+};
+
 export function BasePage(ctx) {
   const state = ctx.state;
-  const total = Object.values(state.base).reduce((a, b) => a + b, 0);
+  const total = Base.totalLevels(state);
   const recipes = Base.recipes(state);
   const left = Base.upgradesLeft(state);
+  const form = Base.form(state);
+  const nextForm = Base.nextForm(state);
+  const tech = Tech.view(state);
 
   return h('div', { class: 'col' },
+    // 基地形态（无限生存方案 §四：木屋 → 地下避难所 → 钢铁堡垒 → 大型地下城市）
+    card([
+      h('div', { class: 'row between' },
+        h('span', { class: 'strong' }, `${form.icon} ${form.name}`),
+        tag(`科技 Lv.${Tech.totalLevels(state)}`, 'mind')),
+      h('div', { class: 'small muted', style: { marginTop: '6px' } }, form.desc),
+      nextForm
+        ? h('div', { class: 'xs muted', style: { marginTop: '8px' } },
+          `下一个形态「${nextForm.icon} ${nextForm.name}」要求：${nextForm.hint ?? ''}${nextForm.gap?.levels ? `（设施等级还差 ${nextForm.gap.levels}）` : ''}`)
+        : h('div', { class: 'xs', style: { marginTop: '8px', color: 'var(--c-good)' } }, '已经是最高形态。文明还在。'),
+    ], { cls: 'mind' }),
+
     card([
       h('div', { class: 'row between' },
         h('span', { class: 'strong' }, '地下基地'),
@@ -47,6 +70,24 @@ export function BasePage(ctx) {
       h('div', { class: 'btn-group', style: { marginTop: '10px' } },
         btn('人物与互助', { kind: 'ghost', sm: true, onClick: () => ctx.go('characters') })),
     ], { cls: 'mind' }),
+
+    sectionTitle('科技', h('span', { class: 'xs muted' }, `晶核 ${state.cores} · 蓝图 ${Inventory.count(state, 'blueprint')}`)),
+    h('div', { class: 'col' }, tech.map((line) => h('div', { class: 'line' },
+      h('span', { class: 'ic', style: { fontSize: '18px' } }, line.icon),
+      h('div', { class: 'grow' },
+        h('div', { class: 'row between' },
+          h('span', { class: 'strong small' }, line.name),
+          h('span', { class: 'xs muted' }, `Lv.${line.level} / ${Tech.MAX_TECH_LEVEL}`)),
+        h('div', { style: { marginTop: '4px' } }, progress(line.level, Tech.MAX_TECH_LEVEL, { cls: 'mind' })),
+        h('div', { class: 'xs muted', style: { marginTop: '4px' } }, line.max ? '已研究到顶' : `${line.current} → ${line.next?.desc ?? ''}`),
+        !line.max && line.cost ? h('div', { class: 'xs muted' }, `需要：${techCostText(line.cost)}｜耗时 180 分钟`) : null),
+      line.max
+        ? tag('满级', 'good')
+        : btn('研究', {
+          kind: 'primary', sm: true, disabled: !line.available,
+          reason: line.reason,
+          onClick: (e) => { e.stopPropagation(); ctx.apply(Tech.research(state, line.id)); },
+        })))),
 
     sectionTitle('设施', h('span', { class: 'xs muted' }, `上限 ${Base.MAX_LEVEL} 级 · 点开升级`)),
     h('div', { class: 'col' }, Base.FACILITIES.map((f) => {

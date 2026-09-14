@@ -128,6 +128,7 @@ test('全界面审查：每个地点详情、物品详情、人物详情、设�
   const problems = [];
 
   // 每个地点的详情 Sheet：行动名、耗时、收益都必须真实
+  ctx.state.day = 200;   // 第二阶段以后开放的新区域也要一起审（调到较晚的一天）
   for (const loc of Object.values(LOCATIONS)) {
     const page = pages.Action(ctx);
     const row = [...page.walk()].find((n) => (n.className ?? '').includes('item') && n.allText.includes(loc.name));

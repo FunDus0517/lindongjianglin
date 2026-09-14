@@ -8,6 +8,7 @@ import { chance, clamp, randInt } from '../core/util.js';
 import * as Inventory from './Inventory.js';
 import * as Mind from './Mind.js';
 import * as Power from './Power.js';
+import * as Tech from './Tech.js';
 import { item } from '../data/items.js';
 
 export const move = (id) => BATTLE_MOVES[id];
@@ -15,7 +16,8 @@ export const enemyOf = (id) => ENEMIES[id];
 
 /** 玩家防御：装备保暖层、防御设施与装备强化同时提供战斗减伤。 */
 export const playerDef = (state) =>
-  1 + Inventory.equipStats(state).warmthResist * 0.5 + (state.base.defense ?? 0) * 0.5 + Mind.enhanceLevel(state, 'gear');
+  1 + Inventory.equipStats(state).warmthResist * 0.5 + (state.base.defense ?? 0) * 0.5
+  + Mind.enhanceLevel(state, 'gear') + Tech.bonus(state).defense;
 /** 玩家攻击：基础 + 武器 + 武器强化 + 晶核 - 精神影响。 */
 export const playerAtk = (state) =>
   6 + Inventory.equipStats(state).weapon * 4 + Mind.enhanceLevel(state, 'weapon') * 3 + Math.floor((state.cores ?? 0) * 1.5) + (state.stats.mind < 30 ? -2 : 0);

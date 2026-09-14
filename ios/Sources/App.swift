@@ -20,6 +20,8 @@ final class GameViewController: UIViewController, WKNavigationDelegate {
         let config = WKWebViewConfiguration()
         config.allowsInlineMediaPlayback = true
         config.mediaTypesRequiringUserActionForPlayback = []
+        // 震动桥：网页里 core/haptics.js 会往这里发消息，iOS 端负责真的震一下。
+        config.userContentController.add(WeakMessageHandler(self), name: "haptic")
 
         webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = self
@@ -150,5 +152,33 @@ final class AppDelegate: UIResponder, UIApplicationDelegate {
         window.makeKeyAndVisible()
         self.window = window
         return true
+    }
+}
+
+/// 震动反馈（无限生存方案 §九：爽感反馈）。
+/// 网页没有 iOS 震动 API，所以这里接住 core/haptics.js 发来的消息，用系统触感引擎震一下。
+final class WeakMessageHandler: NSObject, WKScriptMessageHandler {
+
+    private weak var target: GameViewController?
+
+    init(_ target: GameViewController) { self.target = target }
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        let kind = (message.body as? String) ?? "light"
+        target?.feedback(kind)
+    }
+}
+
+extension GameViewController {
+
+    /// 把网页传过来的语义映射到系统触感强度。
+    func feedback(_ kind: String) {
+        switch kind {
+        case "heavy": UIImpactFeedbackGenerator(style: .heavy).impactOccurred()
+        case "medium": UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        case "success": UINotificationFeedbackGenerator().notificationOccurred(.success)
+        case "warning": UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        default: UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
     }
 }

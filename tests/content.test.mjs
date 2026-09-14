@@ -66,7 +66,7 @@ function richState(day = 10, seed = 777) {
 
 test('数据完整性：地点与行动的掉落物全部存在', () => {
   for (const loc of Object.values(LOCATIONS)) {
-    assert.ok(loc.unlockDay >= 1 && loc.unlockDay <= 30, `${loc.name} 的解锁天数应在 1—30`);
+    assert.ok(loc.unlockDay >= 1 && loc.unlockDay <= 400, `${loc.name} 的解锁天数应在 1—30`);
     for (const [actionId, spec] of Object.entries(loc.actions)) {
       assert.ok(ACTIONS[actionId], `${loc.name}.${actionId} 不是合法的行动词表`);
       for (const [itemId, min, max, p] of spec.loot ?? []) {
@@ -147,7 +147,7 @@ test('内容可达性：每个地点的每个行动都能被结算并给出结�
   s.stats.energy = 100;
   for (const loc of Object.values(LOCATIONS)) {
     for (const actionId of Object.keys(loc.actions)) {
-      const trial = { ...s, stats: { ...s.stats, energy: 100 }, location: null, queue: [], active: null };
+      const trial = { ...s, day: 200, stats: { ...s.stats, energy: 100 }, location: null, queue: [], active: null };
       const out = Explore.performAction(trial, loc.id, actionId);
       assert.equal(out.ok, true, `${loc.name} · ${ACTIONS[actionId].label} 应可执行：${out.reason}`);
       assert.ok(out.minutes > 0, `${loc.name} · ${ACTIONS[actionId].label} 必须消耗时间`);
@@ -322,13 +322,13 @@ test('全流程模拟：自动游玩第 1—30 天，第 31 天进入无尽模�
     GameTime.sleep(s);
   }
 
-  // 商业化升级：**不设置固定结局**。第 30 天不再是终点，而是给一份阶段总结后进入无尽模式，
-  // 所以这里断言"活着走到第 31 天且没有被强制收尾"，而不是断言拿到了某个 final 结局。
+  // 无限生存：第 30 天不是终点，世界在第 31 天进入第二阶段，游戏继续
   assert.equal(s.ending, null, `第 ${s.day} 天不该被强制结局（实际 ${s.ending?.id}）`);
   assert.ok(s.day > Story.CONTENT_DAYS, `应至少推进到第 31 天，实际第 ${s.day} 天`);
-  assert.equal(s.milestone, 'M4', '第 31 天必须标记 M4 里程碑完成');
-  assert.equal(s.flags.endless, true, '第 31 天必须开启无尽模式');
-  assert.equal(s.reports.length, 1, '第 31 天必须留下 1 份阶段总结');
+  assert.equal(s.milestone, 'M4', '第 31 天必须标记第一阶段里程碑完成');
+  assert.equal(s.flags.phase_P2, true, '第 31 天必须进入「永冬时代」');
+  assert.equal(s.reports.length, 1, '阶段切换必须留下 1 份总结');
+  assert.equal(s.reports[0].phaseTo, '永冬时代');
   assert.ok(s.reports[0].title, '阶段总结必须带评价标题');
   assert.ok(s.reports[0].desc, '阶段总结必须带描述');
   assert.ok(s.stats.hp > 0);

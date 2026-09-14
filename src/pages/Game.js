@@ -11,6 +11,7 @@ import { capacity, countCategory, used } from '../systems/Inventory.js';
 import { condition } from '../systems/Survival.js';
 import { band } from '../systems/Fame.js';
 import * as Achievement from '../systems/Achievement.js';
+import * as Assistant from '../systems/Assistant.js';
 import * as Base from '../systems/Base.js';
 import * as Daily from '../systems/Daily.js';
 import * as Death from '../systems/Death.js';
@@ -58,6 +59,7 @@ export function Game(ctx) {
   const duelReady = Duel.view(state).filter((d) => !d.locked).length;
   const ach = Achievement.view(state);
   const lastReport = (state.reports ?? [])[(state.reports ?? []).length - 1] ?? null;
+  const ass = Assistant.assistant(state);
 
   const resources = [
     { icon: '🍖', label: '食物', value: countCategory(state, 'food') },
@@ -87,7 +89,7 @@ export function Game(ctx) {
       ], { cls: 'mind' })
       : null,
 
-    // 光脑提示条
+    // 光脑 AI 助手（方案 §十）：天气预测 / 资源分析 / 危险预警 / 生存建议
     card([
       h('div', { class: 'row between' },
         h('div', { class: 'row', style: { gap: '8px' } },
@@ -95,8 +97,19 @@ export function Game(ctx) {
           tag(hint.brain.name, 'mind'),
           tag(cond.text, cond.kind)),
         btn('光脑', { kind: 'ghost', sm: true, onClick: () => ctx.go('mind') })),
-      h('div', { class: 'col', style: { marginTop: '10px' } },
-        hint.lines.map((l) => h('div', { class: 'small muted' }, l))),
+      h('div', { class: 'col', style: { gap: '8px', marginTop: '10px' } },
+        h('div', null,
+          h('div', { class: 'xs muted' }, '天气预测'),
+          ass.weather.map((l) => h('div', { class: 'small' }, l))),
+        h('div', null,
+          h('div', { class: 'xs muted' }, '资源分析'),
+          ass.resources.map((l) => h('div', { class: 'small' }, l))),
+        h('div', null,
+          h('div', { class: 'xs muted' }, '危险预警'),
+          ass.danger.map((l) => h('div', { class: ass.dangerLevel === 'warn' ? 'small' : 'small muted' }, `· ${l}`))),
+        h('div', null,
+          h('div', { class: 'xs muted' }, '生存建议'),
+          ass.advice.map((l, i) => h('div', { class: 'small strong' }, `${i + 1}. ${l}`)))),
     ], { cls: 'mind' }),
 
     // 第一信息区

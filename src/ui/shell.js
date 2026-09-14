@@ -5,6 +5,7 @@
 import { h, mount } from '../core/dom.js';
 import { btn } from './components.js';
 import * as audio from '../core/audio.js';
+import { haptic, hapticForKind } from '../core/haptics.js';
 import { fmtClock, PHASE_LABEL, dayPhase } from '../core/util.js';
 import { ambient, weather } from '../systems/Weather.js';
 import { META } from '../systems/Survival.js';
@@ -119,6 +120,7 @@ export function startFeedbackLoop(store) {
   setInterval(() => {
     for (const t of store.drainToasts()) {
       audio.cueForKind(t.kind);
+      haptic(hapticForKind(t.kind));
       const el = h('div', { class: ['toast', t.kind] }, t.text);
       toastBox.appendChild(el);
       setTimeout(() => {

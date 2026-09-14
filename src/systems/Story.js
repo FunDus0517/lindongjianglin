@@ -1,24 +1,31 @@
 /**
- * 剧情推进（项目书 §4、§8）。负责章节叙事、主线事件排队、里程碑边界。
- * 脚本事件按天排队，排队顺序即叙事顺序。
+ * 剧情推进（无限生存版）：不再有"某天必须演哪一段"的固定编排。
+ *
+ * 规则：
+ *   - 第 1 天的三段开场仍然按顺序演出（它就是新手引导，必须保证体验一致）
+ *   - 其余剧本事件只是登记一个**最早可出现的日子**，到日子之后进入随机池，
+ *     按原编排顺序优先抽取 —— 剧情顺序还在，但不再是固定章节排期
+ *   - 世界状态由三个无限阶段驱动（见 data/chapters.js），阶段切换只改变世界，不结束游戏
  * @module systems/Story
  */
-import { TOTAL_DAYS, chapterOf } from '../data/chapters.js';
+import { TOTAL_DAYS, chapterOf, phaseOf, PHASES } from '../data/chapters.js';
 
-/** 里程碑划分（项目书 §24 开发阶段）。 */
+/** 里程碑（开发阶段划分，保留用于"开发者视角"的说明）。 */
 export const MILESTONES = [
   { id: 'M1', label: '第 1—3 天', through: 3, title: '基础生存', focus: 'UI 骨架、时间与状态、行动与事件、存档' },
   { id: 'M2', label: '第 4—10 天', through: 10, title: '秩序崩溃', focus: '取舍与人情、掠夺者、感染者、邻里互助、能源与保温' },
   { id: 'M3', label: '第 11—20 天', through: 20, title: '势力与战力', focus: '战力榜、晶核强化、挑战线、势力冲突、医院主线' },
-  { id: 'M4', label: '第 21—30 天', through: 30, title: '终局', focus: '交易区、晶矿、潜伏、丧尸潮与结局判定' },
+  { id: 'M4', label: '第 21—30 天', through: 30, title: '第一阶段尾声', focus: '交易区、晶矿、潜伏、尸潮与基地成型' },
 ];
 
-/** 已开放脚本剧情的最后一天。全部 30 天内容完成。 */
-export const CONTENT_DAYS = 30;
+/** 第 1 天的开场（顺序固定）。 */
+export const OPENING_SCRIPTS = ['d1_hail', 'd1_blackout', 'd1_mind_bind'];
 
-/** 每天开场的脚本事件（按顺序触发）。 */
-export const DAY_SCRIPTS = {
-  1: ['d1_hail', 'd1_blackout', 'd1_mind_bind'],
+/**
+ * 剧本事件 → 最早可出现的日子。
+ * 这张表就是原来"第几天演哪几段"，现在只当作**叙事顺序与解锁门槛**使用。
+ */
+export const STORY_SCHEDULE = {
   2: ['d2_order_breakdown'],
   3: ['d3_cold_snap', 'd3_raider_ambush'],
   4: ['d4_line_of_people', 'd4_xiao_wu'],
@@ -50,22 +57,34 @@ export const DAY_SCRIPTS = {
   30: ['d30_dawn'],
 };
 
-export const scriptsFor = (day) => DAY_SCRIPTS[day] ?? [];
+/** event id → 最早出现日（供随机池排序与门槛判断）。 */
+export const MIN_DAY = Object.fromEntries(
+  Object.entries(STORY_SCHEDULE).flatMap(([day, ids]) => ids.map((id) => [id, Number(day)])),
+);
 
-/** 新游戏：初始化第 1 天的叙事队列。 */
+export const minDayOf = (id) => MIN_DAY[id] ?? 0;
+
+/** 旧接口：曾经用于"按天排队"，现在只返回开场序列（兼容调用方）。 */
+export const scriptsFor = (day) => (day === 1 ? OPENING_SCRIPTS : []);
+
+/** 新游戏：只把第 1 天的开场排进队列。 */
 export function begin(state) {
-  state.queue = [...scriptsFor(1)];
+  state.queue = [...OPENING_SCRIPTS];
   state.chapterTitle = chapterOf(1).title;
+  state.phase = 'P1';
 }
 
-/** 每日刷新时把当天脚本事件排入队列。 */
+/**
+ * 每日刷新：不再往队列里塞剧本。
+ * 只更新章节标题与阶段；阶段切换由 GameTime 负责出总结。
+ */
 export function onNewDay(state) {
   const ch = chapterOf(state.day);
   state.chapterTitle = ch.title;
-  state.queue.push(...scriptsFor(state.day));
+  state.phase = phaseOf(state.day).id;
   const done = completedMilestone(state.day);
-  if (done && state.day > CONTENT_DAYS) state.milestone = done.id;
-  else if (state.day <= CONTENT_DAYS) state.milestone = null;
+  if (done && state.day > TOTAL_DAYS) state.milestone = done.id;
+  else if (state.day <= TOTAL_DAYS) state.milestone = null;
   if (state.day > TOTAL_DAYS) state.milestone = 'M4';
 }
 
@@ -73,7 +92,6 @@ export function onNewDay(state) {
 export const completedMilestone = (day) =>
   [...MILESTONES].reverse().find((m) => day > m.through) ?? null;
 
-/** 下一个尚未开放的里程碑（里程碑结算页展示开发范围）。 */
 export const nextMilestone = (id) => {
   const i = MILESTONES.findIndex((m) => m.id === id);
   return i < 0 ? MILESTONES[0] : MILESTONES[Math.min(i + 1, MILESTONES.length - 1)];
@@ -82,11 +100,19 @@ export const nextMilestone = (id) => {
 export const milestoneById = (id) => MILESTONES.find((m) => m.id === id) ?? MILESTONES[0];
 export const milestoneOpen = (state) => state.milestone === 'M1' || state.milestone === 'M2';
 
-/** 章节回顾（首页“章节回顾”入口）：已到达过的章节摘要。 */
+/** 章节回顾（首页入口）：已到达过的日子（第一阶段逐日，之后按阶段显示）。 */
 export function recap(state) {
   const out = [];
-  for (let d = 1; d <= Math.max(state.day, 1); d++) out.push(chapterOf(d));
+  const until = Math.max(state.day, 1);
+  for (let d = 1; d <= Math.min(until, TOTAL_DAYS); d++) out.push(chapterOf(d));
+  if (until > TOTAL_DAYS) out.push({ ...chapterOf(until) });
   return out.map((c) => ({ ...c, reached: c.day <= state.day }));
 }
 
 export const chapter = (state) => chapterOf(state.day);
+export { PHASES, TOTAL_DAYS };
+
+/** 兼容别名：第一阶段（第 1—30 天）的剧本天数，界面章节列表用它。 */
+export const CONTENT_DAYS = TOTAL_DAYS;
+/** 兼容别名：原来的"第几天演哪几段"，现在只当叙事顺序与解锁门槛。 */
+export const DAY_SCRIPTS = STORY_SCHEDULE;

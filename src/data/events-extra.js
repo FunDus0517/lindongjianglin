@@ -524,4 +524,94 @@ export const EXTRA_EVENTS = {
       },
     ],
   },
+
+  /* ---------------- 凌晨灾害（方案 §八：凌晨可能发生灾害） ----------------
+   * kind: 'night' 的事件不进随机池，只在睡觉时按天数确定性地抽一条，
+   * 玩家醒来就得处理：维修 / 节能 / 承担人员伤亡风险。 */
+  night_heating_fail: {
+    id: 'night_heating_fail', title: '供暖停了', kind: 'night',
+    text: () => '凌晨三点，你被冻醒。屋里比外面暖不了多少——供暖管路的压力表指针压在零上。\n\n外面是零下四十度。你大概有两个小时可以做决定。',
+    choices: [
+      {
+        id: 'repair', label: '立刻修，拆东墙补西墙', hint: '需要零件与金属',
+        enabled: (s) => afford(s, { parts: 1, metal: 1 }),
+        resolve: () => ({ notes: ['你把手电叼在嘴里，跪在管井里换了一段管。', '四点十分，压力表回到了绿色区间。'], items: { parts: -1, metal: -1 }, minutes: 120, stats: { energy: -22, warmth: -6, hp: -2 }, flags: { fixed_heating_night: true }, toast: { text: '供暖抢修成功', kind: 'good' } }),
+      },
+      {
+        id: 'throttle', label: '把燃料全烧掉，先保住这一晚', hint: '费燃料，但不冻人',
+        enabled: (s) => afford(s, { charcoal: 2 }) || afford(s, { firewood: 3 }),
+        resolve: (s) => {
+          const useCharcoal = afford(s, { charcoal: 2 }) === true;
+          return {
+            notes: [useCharcoal ? '你把两箱无烟木炭全倒进炉子，火苗一下窜到半米高。' : '你把三捆木柴塞进炉膛，火声盖过了风声。', '这一晚保住了，但燃料见底了。'],
+            items: useCharcoal ? { charcoal: -2 } : { firewood: -3 },
+            minutes: 60,
+            stats: { warmth: 4, energy: -8 },
+            flags: { burned_reserve_night: true },
+          };
+        },
+      },
+      {
+        id: 'endure', label: '裹紧被子，硬扛到天亮', hint: '不动物资，但有人会撑不住',
+        resolve: () => ({ notes: ['你把所有能盖的都盖上，靠墙坐到天亮。', '早上清点的时候，李阿姨的手已经肿了——她在自己屋里没舍得烧柴。'], minutes: 180, stats: { warmth: -14, hp: -6, mind: -5 }, npc: { li_ayi: { injured: 1, stress: 12 }, xiao_wu: { stress: 10 } }, flags: { endured_cold_night: true } }),
+      },
+    ],
+  },
+  night_zombie_knock: {
+    id: 'night_zombie_knock', title: '深夜有人敲门', kind: 'night',
+    text: () => '凌晨两点，单元门被撞了一下。停顿。又撞了一下。\n\n不是风。风不会等。',
+    choices: [
+      {
+        id: 'fight', label: '抄起武器下去', hint: '直接解决',
+        resolve: () => ({ notes: ['你下楼的时候它们已经在门厅里了。'], minutes: 20, battle: 'infected_pack', stats: { energy: -8 }, flags: { fought_night_raid: true } }),
+      },
+      {
+        id: 'barricade', label: '把柜子推过去顶住，等它们走', hint: '不出门',
+        resolve: () => ({ notes: ['你和衣坐在门后，听得见指甲刮铁皮的声音。', '四点左右，声音散了。'], minutes: 180, stats: { energy: -14, mind: -8 }, flags: { barricaded_door: true } }),
+      },
+      {
+        id: 'trap', label: '打开一楼的电闸，用走廊的灯把它们引走', hint: '需要能源设施',
+        enabled: (s) => (s.base?.power ?? 0) >= 1,
+        resolve: () => ({ notes: ['你合上闸，走廊的灯亮了一排。', '它们被光引向了另一头。电费又少了一截。'], minutes: 40, base: { power: 0 }, items: { fuel: -1 }, stats: { mind: 3 }, flags: { lured_away: true } }),
+      },
+    ],
+  },
+  night_fire: {
+    id: 'night_fire', title: '楼下起火了', kind: 'night',
+    text: () => '烟味先到的。你打开门，楼道里有橘色的跳动的光。\n\n有人在楼下喊，但听不清喊的是谁的名字。',
+    choices: [
+      {
+        id: 'bucket', label: '拎水桶下去扑', hint: '烧雪取水，费时间',
+        resolve: () => ({ notes: ['你来回跑了十几趟，把雪装进桶里提到火边上。', '火在一楼单元门口停住了。'], minutes: 120, items: { purified: -2 }, stats: { energy: -26, hp: -4, warmth: -8 }, npc: { wangdawei: { favor: 8, trust: 6 } }, fame: 4, flags: { fought_fire: true } }),
+      },
+      {
+        id: 'smother', label: '用湿被子捂住火头', hint: '需要绷带/布料类物资',
+        enabled: (s) => afford(s, { bandage: 2 }),
+        resolve: () => ({ notes: ['你把两条被子泡透，压在火最旺的地方。', '手背被燎掉一块皮。'], items: { bandage: -2 }, minutes: 60, stats: { hp: -6, energy: -14 }, flags: { fought_fire: true } }),
+      },
+      {
+        id: 'up', label: '把楼上的门都敲开，先让人往顶楼撤', hint: '救人优先',
+        resolve: () => ({ notes: ['你一层一层往上敲，把人往天台赶。', '天亮的时候，火自己烧完了半条楼道。没有人死。'], minutes: 150, stats: { energy: -18, mind: 4 }, npc: { li_ayi: { favor: 6, trust: 6 }, xiao_wu: { favor: 5 } }, fame: 5, aid: { morale: 6 }, flags: { saved_neighbors_fire: true } }),
+      },
+    ],
+  },
+  night_roof_collapse: {
+    id: 'night_roof_collapse', title: '雪把顶压塌了', kind: 'night',
+    text: () => '一声闷响，天花板掉下来一层雪和灰。你睡觉的位置正上方露出了木梁。\n\n外面的雪还在下。',
+    choices: [
+      {
+        id: 'shovel', label: '上天台把雪清掉', hint: '体力活，但治本',
+        resolve: () => ({ notes: ['你在天台铲了三个小时，手冻得握不住铲子把。', '天亮的时候，屋顶不再往下弯了。'], minutes: 180, stats: { energy: -30, warmth: -12, hp: -4 }, base: { shelter: 0 }, flags: { cleared_roof: true } }),
+      },
+      {
+        id: 'prop', label: '用木头把梁撑起来', hint: '需要木材',
+        enabled: (s) => afford(s, { wood: 2 }),
+        resolve: () => ({ notes: ['你竖了两根木柱，把梁顶回去。', '屋里终于不漏雪了。'], items: { wood: -2 }, minutes: 90, stats: { energy: -18 }, flags: { propped_roof: true } }),
+      },
+      {
+        id: 'move', label: '带着东西挪到别的房间去睡', hint: '不修，先保人',
+        resolve: () => ({ notes: ['你把床垫拖进里屋，用柜子挡住那面墙。', '塌的那块地方，后来再没进去过。'], minutes: 90, stats: { energy: -16, warmth: -6, mind: -3 }, flags: { abandoned_room: true } }),
+      },
+    ],
+  },
 };

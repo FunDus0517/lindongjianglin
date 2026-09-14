@@ -84,6 +84,13 @@ export function applyOutcome(state, outcome, opts = {}) {
       state.base[id] = clamp((state.base[id] ?? 0) + delta, 0, max);
     }
   }
+  // 科技：四条线各自累加（研究成本在 systems/Tech.js 里扣）
+  if (outcome.tech) {
+    state.tech = state.tech ?? {};
+    for (const [id, delta] of Object.entries(outcome.tech)) {
+      state.tech[id] = clamp((state.tech[id] ?? 0) + delta, 0, 5);
+    }
+  }
 
   /* 4. 人物关系、势力立场与 Flag */
   if (outcome.npc) for (const [id, deltas] of Object.entries(outcome.npc)) NPC.change(state, id, deltas);

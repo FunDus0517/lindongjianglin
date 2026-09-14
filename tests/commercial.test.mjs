@@ -30,7 +30,7 @@ import * as GameTime from '../src/systems/GameTime.js';
 import * as Story from '../src/systems/Story.js';
 import * as Quest from '../src/systems/Quest.js';
 import { applyOutcome } from '../src/core/effects.js';
-import { chapterOf, TOTAL_DAYS } from '../src/data/chapters.js';
+import { chapterOf, phaseOf, worldMods, TOTAL_DAYS, PHASES } from '../src/data/chapters.js';
 
 const fresh = (seed = 20260913) => Save.createState(seed);
 
@@ -278,7 +278,7 @@ test('倒地：atRisk 预览与真实损失一致，且不会清空仓库', () =
   assert.ok(s.stats.hp > 0 && s.stats.warmth > 0, '倒地后必须被抬回安全线');
 });
 
-test('无尽模式：第 31 天不再产出结局，而是留下阶段总结并继续；剧本内容仍到第 30 天', () => {
+test('世界阶段：第 31 天进入「永冬时代」，只改变世界状态、不出结局，且温度继续下降', () => {
   const s = fresh();
   Story.begin(s);
   Quest.refresh(s);
@@ -289,17 +289,23 @@ test('无尽模式：第 31 天不再产出结局，而是留下阶段总结并�
   const rolled = GameTime.rollDay(s);
   assert.equal(s.day, TOTAL_DAYS + 1);
   assert.equal(s.ending, null, '第 31 天不能产出结局');
-  assert.equal(s.flags.endless, true, '必须开启无尽模式');
-  assert.equal(s.reports.length, 1);
+  assert.equal(rolled.phaseChanged, true, '第 31 天必须发生阶段切换');
+  assert.equal(s.flags.phase_P2, true, '必须留下第二阶段已开启的标记');
+  assert.equal(s.reports.length, 1, '阶段切换必须留一份总结');
   assert.equal(rolled.report?.day, TOTAL_DAYS);
+  assert.equal(rolled.report?.phaseTo, '永冬时代');
 
-  // 无尽章节：天气/任务不新增，但气温随天数回暖且不会低于脚本最后一天
+  // 世界状态：第二阶段更冷、资源更少、危险更高；不再新增主线任务
   const c31 = chapterOf(TOTAL_DAYS + 1);
   const c60 = chapterOf(TOTAL_DAYS + 30);
-  assert.equal(c31.endless, true);
-  assert.equal(c31.quests.length, 0, '无尽模式不再新增主线任务');
-  assert.ok(c60.temp >= c31.temp, '无尽模式气温必须缓慢回暖');
-  assert.ok(c60.temp <= -16, '回暖必须有上限，不能变成春天');
+  const c101 = chapterOf(101);
+  assert.equal(c31.phase, 'P2');
+  assert.equal(c101.phase, 'P3');
+  assert.equal(c31.quests.length, 0, '第二阶段不再新增第一阶段的任务');
+  assert.ok(c60.temp < c31.temp, '永冬时代温度必须继续下降');
+  assert.ok(c101.temp < c60.temp, '冰封世界必须比永冬时代更冷');
+  assert.ok(worldMods(TOTAL_DAYS + 1).lootMod < worldMods(1).lootMod, '越往后能捡到的东西越少');
+  assert.ok(worldMods(TOTAL_DAYS + 1).dangerMod > worldMods(1).dangerMod, '越往后越危险');
 });
 
 /* ---------------- 9. 新手引导 ---------------- */

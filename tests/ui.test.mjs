@@ -184,13 +184,14 @@ test('UI：结局页与里程碑页都能展示对应状态', () => {
   assert.match(pages.Ending(ctx).allText, /冰封/);
 
   state.milestone = 'M1';
-  assert.match(pages.Milestone(ctx).allText, /M1 里程碑完成/);
+  assert.match(pages.Milestone(ctx).allText, /世界阶段/, '阶段总结页必须说明当前世界阶段');
 
   state.milestone = 'M2';
   const m2 = pages.Milestone(ctx).allText;
-  assert.match(m2, /M2 里程碑完成/, '第 11 天必须展示 M2 结算');
-  assert.match(m2, /M3/, 'M2 结算页必须说明下一步开发范围');
-  assert.match(m2, /互助体系/, 'M2 结算页必须包含本阶段新增系统的进度');
+  assert.match(m2, /世界阶段/, '阶段总结页必须展示世界阶段');
+  assert.match(m2, /阶段不会结束/, '必须明确阶段不结束游戏');
+  assert.match(m2, /幸存者|互助/, '阶段总结必须包含幸存者/互助的进度');
+  assert.match(m2, /光脑建议/, '阶段总结必须带上光脑建议');
 });
 
 test('UI：第 6 天起行动页出现新区域，第 7 天感染者剧情可渲染', () => {
@@ -597,16 +598,16 @@ const clickText = (root, text) => {
   return el;
 };
 
-test('引导：无存档时 main.js 渲染首页，开始游戏后进入第 1 天开场事件', async () => {
+test('引导：无存档时 main.js 渲染沉浸式启动页，开始生存后进入第 1 天开场事件', async () => {
   await import('../src/main.js');
   await flush();
   const app = document.getElementById('app');
   assert.match(app.allText, /凛冬降临/, '首页必须渲染出标题');
-  assert.match(app.allText, /开始游戏/, '无存档时必须提供开始游戏入口');
+  assert.match(app.allText, /开始生存/, '无存档时必须提供开始生存入口');
 
-  clickText(app, '开始游戏');
+  clickText(app, '开始生存');
   await flush();
-  assert.match(app.allText, /冰雹降临/, '开始游戏后必须进入第 1 天开场剧情');
+  assert.match(app.allText, /冰雹降临/, '开始生存后必须进入第 1 天开场剧情');
 
   clickText(app, '关好门窗');
   await flush();

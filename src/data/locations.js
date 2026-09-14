@@ -21,6 +21,67 @@ export const ACTIONS = {
 };
 
 export const LOCATIONS = {
+  /* ---------------- 第二阶段（永冬时代，第 31 天起）开放的新区域 ----------------
+   * 方案 §三：阶段推进不只是改数值，还要开放新区域、给长期探索留空间。
+   * 这些地点门槛高、收益结构不同（更多晶核/零件、更少食物），是"越往后越难捡"的补偿。 */
+  frozen_port: {
+    id: 'frozen_port', name: '冰封码头', icon: '🚢', danger: 4, indoor: false, unlockDay: 31,
+    desc: '江面冻成了灰白色的石头，几十条船被封在冰里。船舱是密封的——里面可能还留着货，也可能留着人。',
+    events: [],
+    actions: {
+      search: { loot: [['metal', 1, 3, 0.7], ['frozen_meat', 0, 2, 0.5], ['fuel', 0, 1, 0.3]], note: '沿着船舷挨个撬舱门。' },
+      explore: { loot: [['parts', 1, 2, 0.6], ['insulation', 0, 2, 0.45], ['headlamp', 0, 1, 0.2]], note: '下到货舱，手电照着冰面往前走。' },
+      fight: { loot: [['ice_axe', 0, 1, 0.2], ['metal', 1, 2, 0.6]], note: '把舱里的东西引出来处理掉。' },
+      retreat: { loot: [], note: '退回岸上的铁轨旁。' },
+    },
+  },
+  underground_mall: {
+    id: 'underground_mall', name: '地下商场', icon: '🛗', danger: 4, indoor: true, unlockDay: 45,
+    desc: '地铁连着的商业层，停电之后一直没人清过。空气不流通，但温度比地面高十几度。',
+    events: [],
+    actions: {
+      search: { loot: [['canned', 1, 3, 0.6], ['bottled_water', 1, 2, 0.55], ['bandage', 0, 2, 0.4]], note: '翻超市货架和便利店冷柜。' },
+      explore: { loot: [['medicine', 0, 2, 0.4], ['parts', 0, 2, 0.45], ['water_tank', 0, 1, 0.25]], note: '往商场深处走，找药房和维修间。' },
+      investigate: { loot: [['blueprint', 0, 1, 0.3], ['seeds', 0, 1, 0.25]], note: '查配电图和商铺清单。' },
+      retreat: { loot: [], note: '顺着指示牌回到入口。' },
+    },
+  },
+  military_checkpoint: {
+    id: 'military_checkpoint', name: '军用检查站', icon: '🚧', danger: 5, indoor: false, unlockDay: 61,
+    desc: '撤离时被放弃的卡点：两辆装甲车横在路上，铁丝网还立着。当年守在这里的人，没等到换防。',
+    events: [],
+    actions: {
+      search: { loot: [['ammo', 1, 3, 0.6], ['metal', 1, 3, 0.6], ['compressed', 0, 2, 0.4]], note: '翻装甲车的储物箱。' },
+      explore: { loot: [['parts', 1, 3, 0.6], ['fuel', 0, 2, 0.4], ['hunting_rifle', 0, 1, 0.25]], note: '撬开指挥车的舱门。' },
+      fight: { loot: [['gas_mask', 0, 1, 0.25], ['ammo', 1, 2, 0.5]], note: '先清场再搬东西。' },
+      sneak: { loot: [['ammo', 0, 2, 0.5], ['parts', 0, 1, 0.4]], note: '贴着铁丝网摸进去。' },
+      retreat: { loot: [], note: '退回公路上。' },
+    },
+  },
+  /* ---------------- 第三阶段（冰封世界，第 101 天起） ---------------- */
+  ice_cathedral: {
+    id: 'ice_cathedral', name: '冰封穹顶', icon: '⛪', danger: 5, indoor: true, unlockDay: 101,
+    desc: '体育馆的穹顶被冰压成了一个巨大的白色穹隆，里面像一个没有人的教堂。回声很长。',
+    events: [],
+    actions: {
+      explore: { loot: [['metal', 1, 3, 0.5], ['parts', 1, 3, 0.5], ['medicine', 0, 2, 0.35]], note: '沿着看台一层层往上走。' },
+      investigate: { loot: [['blueprint', 0, 2, 0.4], ['insulation', 1, 2, 0.4]], note: '研究冰层结构，找可以长期利用的空间。' },
+      fight: { loot: [['insulated_boots', 0, 1, 0.25]], note: '把在这里筑巢的东西清掉。' },
+      retreat: { loot: [], note: '从破碎的入口退出去。' },
+    },
+  },
+  deep_mine: {
+    id: 'deep_mine', name: '深层矿脉', icon: '⛏️', danger: 5, indoor: true, unlockDay: 121,
+    desc: '矿道最下面那层，墙上全是发亮的结晶。空气冷得能听见自己呼出的水汽结成冰。',
+    events: [],
+    actions: {
+      explore: { loot: [['metal', 2, 4, 0.7], ['parts', 1, 2, 0.6], ['insulation', 1, 2, 0.5]], note: '沿着矿脉往里凿。' },
+      fight: { loot: [['fur_coat', 0, 1, 0.3], ['medicine', 0, 1, 0.4]], note: '把守矿的东西处理掉再采。' },
+      investigate: { loot: [['blueprint', 1, 2, 0.45]], note: '抄下矿脉走向与结晶分布。' },
+      retreat: { loot: [], note: '爬回上层矿道。' },
+    },
+  },
+
   apartment: {
     id: 'apartment', name: '自家公寓', icon: '🏢', danger: 0, indoor: true, unlockDay: 1,
     desc: '十二层的两居室。窗外的城市正在结冰，屋里还有最后一格电。',

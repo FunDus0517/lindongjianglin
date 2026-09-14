@@ -5,12 +5,14 @@
  */
 import { PHASE_LABEL, fmtClock, dayPhase } from '../core/util.js';
 import { toast } from '../core/store.js';
-import { TOTAL_DAYS, chapterOf } from '../data/chapters.js';
+import { chance } from '../core/util.js';
+import { TOTAL_DAYS, chapterOf, phaseOf } from '../data/chapters.js';
 import * as Achievement from './Achievement.js';
 import * as Base from './Base.js';
 import * as Daily from './Daily.js';
 import * as Death from './Death.js';
 import * as Ending from './Ending.js';
+import * as Event from './Event.js';
 import * as Faction from './Faction.js';
 import * as Growth from './Growth.js';
 import * as Inventory from './Inventory.js';
@@ -22,6 +24,7 @@ import * as Quest from './Quest.js';
 import * as Save from './Save.js';
 import * as Story from './Story.js';
 import * as Survival from './Survival.js';
+import * as Tech from './Tech.js';
 import * as Weather from './Weather.js';
 
 export const DAY_START = 360;   // 06:00
@@ -84,10 +87,11 @@ export function rollDay(state) {
   notes.push(...aid.notes);
   if (applied.ok && aid.changes?.produce) state.log.push({ day: state.day, time: state.time, text: `互助产出：食物 +${aid.changes.produce}`, kind: 'good' });
 
-  // 人物关系漂移：长期高压 + 低好感会让冲突值自己长，必要时退出互助
+  // 人物：关系漂移（冲突会自己长）+ 幸存者成长/转职/受伤/离开
   const drift = NPC.relationshipDrift(state);
   notes.push(...drift.notes);
   if (drift.changes?.members) Faction.syncAid(state);
+  notes.push(...NPC.growCrew(state));
 
   // 每日任务：先结算昨天的连击，再抽今天的
   notes.push(...Daily.refresh(state, prevDay));
@@ -95,23 +99,51 @@ export function rollDay(state) {
   Market.refresh(state);
   Story.onNewDay(state);
 
-  // 商业化升级「不设置固定结局」：第 30 天不再收尾，而是给一份阶段报告后进入无尽模式。
-  if (state.day === TOTAL_DAYS + 1 && !state.ending) {
-    state.flags.endless = true;
-    const rep = Ending.report(state, TOTAL_DAYS);
+  // 晨报：天气预测 + 基地检查（方案 §八「生存循环」的早晨段）
+  const fc = Weather.forecast(state);
+  notes.push(`晨报：今日${Weather.weather(state.weather).name}，室外约 ${Weather.ambient(state)}℃；明日预报「${fc.w.name}」。`);
+  notes.push(`基地检查：${Base.brief(state)}`);
+
+  // 世界阶段推进：只改变世界状态，不结束游戏
+  const prevPhase = phaseOf(prevDay);
+  const phase = phaseOf(state.day);
+  const phaseChanged = phase.id !== prevPhase.id;
+  if (phaseChanged) {
+    state.flags[`phase_${phase.id}`] = true;
+    state.flags[`phase_${prevPhase.id}_done`] = true;
+    const rep = Ending.report(state, prevDay);
+    rep.phaseFrom = prevPhase.name;
+    rep.phaseTo = phase.name;
     state.reports = [...(state.reports ?? []), rep].slice(-12);
-    notes.push(`第三十天过去了。按目前的活法，这本该是「${rep.title}」——但冬天没有结束，你也没有。`);
-    toast(`阶段总结：${rep.title}｜无尽模式开启`, 'mind');
-  } else if (state.day > TOTAL_DAYS + 1 && (state.day - TOTAL_DAYS) % 10 === 1 && !state.ending) {
-    const rep = Ending.report(state);
-    state.reports = [...(state.reports ?? []), rep].slice(-12);
-    notes.push(`又活了十天。当前评价：「${rep.title}」。`);
-    toast(`阶段总结：${rep.title}`, 'mind');
+    notes.push(`世界进入「${phase.name}」：${phase.desc}`);
+    toast(`世界阶段：${phase.name}｜${phase.tagline}`, 'mind');
   }
 
   Achievement.sync(state);
   Save.save(state, '每日刷新');
-  return { day: state.day, weather: state.weather, notes, chapter: chapterOf(state.day), report: state.reports?.[state.reports.length - 1] ?? null };
+  return {
+    day: state.day,
+    weather: state.weather,
+    notes,
+    chapter: chapterOf(state.day),
+    phase,
+    phaseChanged,
+    report: state.reports?.[state.reports.length - 1] ?? null,
+  };
+}
+
+/**
+ * 凌晨灾害（方案 §八：凌晨可能发生灾害）。
+ * 触发是**确定性**的：基地防御越低越频繁（3/4/6 天一次），不消耗随机数。
+ * 理由同 Weather.roll —— 随机数推进量一变，整局随机序列会全部错位。
+ */
+export function rollNight(state) {
+  if (!state || state.ending || state.active) return null;
+  const defense = (state.base?.defense ?? 0) + Tech.bonus(state).defense;
+  const risk = Tech.bonus(state).raidRisk;
+  const every = Math.max(2, Math.round((defense >= 4 ? 6 : defense >= 2 ? 4 : 3) * (1 + risk)));
+  if (state.day % every !== 0) return null;
+  return Event.rollNight(state, state.day);
 }
 
 /** 夜间休息：推进到次日 06:00，并按住所等级提高恢复效率。 */
@@ -131,7 +163,12 @@ export function sleep(state) {
   while (state.time >= 1440) { state.time -= 1440; rolled.push(rollDay(state)); }
   const death = Survival.checkDeath(state);
   if (death && !state.ending) applyDown(state, death, rolled);
+  // 凌晨灾害：睡到一半出的乱子，醒来就要处理（方案 §八）
+  const hours = Math.round(minutes / 60);
+  const night = rollNight(state, hours);
   Daily.track(state, 'rest', 1);
   Power.refresh(state);
-  return { minutes, days: rolled, death: death ?? null, notes: [`你休息了 ${Math.round(minutes / 60)} 小时。`] };
+  const notes = [`你休息了 ${hours} 小时。`];
+  if (night) notes.push('凌晨出了事——你被声音吵醒。');
+  return { minutes, days: rolled, death: death ?? null, notes, night };
 }

@@ -4,6 +4,7 @@
  * @module systems/Base
  */
 import { ITEMS, RECIPES } from '../data/items.js';
+import * as Tech from './Tech.js';
 import { applyItems, canFit, count, has } from './Inventory.js';
 import { enhanceLevel } from './Mind.js';
 
@@ -45,7 +46,9 @@ export const RECIPES_COUNT = RECIPES.length;
 export const level = (state, id) => state.base[id] ?? 0;
 export const heatingBonus = (state) => level(state, 'heating');
 /** 室内保温：供暖每级 6℃，住所每级 0.8℃（不进燃料消耗）。 */
-export const indoorWarmth = (state) => heatingBonus(state) * 6 + level(state, 'shelter') * 0.8;
+/** 室内保温（℃）= 供暖设施 + 住所等级 + 供暖科技。 */
+export const indoorWarmth = (state) =>
+  heatingBonus(state) * 6 + level(state, 'shelter') * 0.8 + Tech.bonus(state).warmth;
 export const defenseMod = (state) => 1 - cap(level(state, 'defense'), 8) * 0.08;
 
 /** 今日剩余升级次数（每天 06:00 刷新）。 */
@@ -147,7 +150,10 @@ export function dailySettlement(state) {
 
   const power = level(state, 'power');
   if (power > 0) {
-    const useFuel = Math.min(count(state, 'fuel'), power);
+    // 能源科技：同样的燃料撑更久
+    const save = Tech.bonus(state).fuelSave;
+    const need = Math.max(1, Math.round(power * (1 - Math.min(0.6, save))));
+    const useFuel = Math.min(count(state, 'fuel'), need);
     if (useFuel > 0) {
       changes.fuel = -useFuel;
       notes.push(`能源设施消耗燃油 ${useFuel} 份，照明与光脑运算正常。`);
@@ -162,4 +168,62 @@ export function dailySettlement(state) {
 
   if (Object.keys(changes).length > 0) applyItems(state, changes);
   return notes;
+}
+
+/* ---------------- 基地形态与长期成长（无限生存方案 §四） ---------------- */
+
+/** 设施等级合计（基地的"体量"，形态判定用它做主指标）。 */
+export const totalLevels = (state) =>
+  Object.values(state.base ?? {}).reduce((a, b) => a + (b ?? 0), 0);
+
+/**
+ * 四种基地形态：木屋 → 地下避难所 → 钢铁堡垒 → 大型地下城市。
+ * 判定只看设施等级与关键设施，不引入新数值，存档里不需要额外字段。
+ */
+export const FORMS = [
+  {
+    id: 'cabin', name: '木屋', icon: '🏚️', desc: '挡风、能睡、能烧水。就这些。',
+    need: () => true,
+  },
+  {
+    id: 'shelter', name: '地下避难所', icon: '🏠', desc: '搬进了地下层，供暖和储水开始成体系。',
+    need: (s) => totalLevels(s) >= 8 && level(s, 'shelter') >= 2,
+    hint: '设施合计 8 级、住所 2 级',
+  },
+  {
+    id: 'fortress', name: '钢铁堡垒', icon: '🏰', desc: '有电、有工坊、有防线，掠夺者开始绕路。',
+    need: (s) => totalLevels(s) >= 24 && level(s, 'defense') >= 3 && level(s, 'power') >= 2,
+    hint: '设施合计 24 级、防御 3 级、能源 2 级',
+  },
+  {
+    id: 'city', name: '大型地下城市', icon: '🌆', desc: '几十个人在里面生活、种植、看病、生孩子。文明还在。',
+    need: (s) => totalLevels(s) >= 45 && level(s, 'shelter') >= 5 && level(s, 'medical') >= 3 && level(s, 'greenhouse') >= 3,
+    hint: '设施合计 45 级、住所 5 级、医疗 3 级、温室 3 级',
+  },
+];
+
+export const form = (state) => [...FORMS].reverse().find((f) => f.need(state)) ?? FORMS[0];
+
+/** 下一个形态与还差什么（界面用来给玩家一个长期目标）。 */
+export function nextForm(state) {
+  const cur = form(state);
+  const idx = FORMS.findIndex((f) => f.id === cur.id);
+  const next = FORMS[idx + 1] ?? null;
+  if (!next) return null;
+  return {
+    ...next,
+    missing: totalLevels(state) < 8 ? '先把设施堆起来' : null,
+    gap: { levels: Math.max(0, [0, 8, 24, 45][idx + 1] - totalLevels(state)) },
+  };
+}
+
+/** 晨报用的一行基地状态。 */
+export function brief(state) {
+  const f = form(state);
+  const parts = [`${f.icon} ${f.name}（设施合计 ${totalLevels(state)} 级）`];
+  parts.push(`室内保温 +${Math.round(indoorWarmth(state))}℃`);
+  if (level(state, 'defense') > 0) parts.push(`防御 ${level(state, 'defense')}`);
+  if (level(state, 'power') > 0) parts.push(state.flags.energy_ok === false ? '电力中断' : '电力正常');
+  if (level(state, 'greenhouse') > 0) parts.push(`温室 ${level(state, 'greenhouse')}`);
+  return parts.join('｜');
 }

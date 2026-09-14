@@ -1,14 +1,18 @@
 /**
- * 章节表（项目书 §4 30天剧情结构 + §11 情报页世界信息 + 商业化升级 §六「不设置固定结局」）。
- * 每天给出：主导天气、基准气温、当日刷新任务、章节主旨。
- * weather 引用 systems/Weather.js 的天气 id；quests 引用 data/quests.js 的 id。
+ * 世界阶段（《无限生存优化方案》§三）：游戏不再按"30 天章节"编排，而是分成三个**无限**阶段。
+ * 阶段不会结束，只是改变世界状态 —— 温度继续下降、资源变少、危险变高、新区域开放。
  *
- * 第 30 天之后不再是结局：剧本内容到第 30 天为止，此后进入**无尽模式**——
- * 天气与难度沿用第 30 天，但气温随天数缓慢回暖（黎明之后冬天开始退），
- * 主线任务不再新增，随机事件、地点、人物、经营循环继续跑。
+ *   第一阶段 极寒降临（第 1—30 天）  ：暴雪频繁，资源还算丰富，人不多
+ *   第二阶段 永冬时代（第 31—100 天）：温度继续往下掉，资源减少，危险增加，新区域开放
+ *   第三阶段 冰封世界（第 101 天起） ：极端天气成为常态，高级科技才有出路
+ *
+ * 实现说明：第一阶段仍然保留逐日编排（天气/气温/任务都调过平衡，测试也依赖它），
+ * 第 31 天起改由阶段曲线生成 —— 这样"无限"与"手感"两者都不丢。
  * @module data/chapters
  */
-export const CHAPTERS = [
+
+/** 第一阶段（逐日编排，原 30 天表原样保留）。 */
+export const LEGACY_DAYS = [
   { day: 1, title: '冰雹降临', weather: 'hail', temp: -18, quests: ['q_open_warehouse', 'q_heat', 'q_check_mind', 'q_prepare_out', 'q_first_night'], synopsis: '冰雹砸穿城市，电力与通讯异常。获得初始物资并绑定光脑，完成基础生存任务。' },
   { day: 2, title: '秩序下降', weather: 'normal_cold', temp: -20, quests: ['q_food_stock', 'q_water_stock', 'q_observe_wang'], synopsis: '城市秩序开始下降，食物、饮水和能源的重要性明显提升。' },
   { day: 3, title: '第一轮寒潮', weather: 'cold_snap', temp: -28, quests: ['q_insulate', 'q_survive_cold', 'q_raider'], synopsis: '寒潮加强，体温成为主要生存压力。掠夺者开始活动。' },
@@ -32,34 +36,86 @@ export const CHAPTERS = [
   { day: 21, title: '交易区', weather: 'normal_cold', temp: -33, quests: ['q_market', 'q_market_intel'], synopsis: '交易区正式进入核心玩法，经济系统和稀缺资源流通开启。' },
   { day: 22, title: '晶矿', weather: 'blizzard', temp: -31, quests: ['q_laomao', 'q_mine'], synopsis: '晶矿与线人出现，新的资源层展开。' },
   { day: 23, title: '潜伏', weather: 'extreme_cold', temp: -37, quests: ['q_corridor_lead', 'q_pass'], synopsis: '潜伏与情报战升级。' },
-  { day: 24, title: '势力任务', weather: 'normal_cold', temp: -35, quests: ['q_corridor', 'q_faction_task'], synopsis: '势力任务开始决定最终格局。' },
-  { day: 25, title: '预兆', weather: 'blizzard', temp: -34, quests: ['q_horde_prep', 'q_final_build'], synopsis: '丧尸潮预兆出现，防御体系需要提前成型。' },
+  { day: 24, title: '势力任务', weather: 'normal_cold', temp: -35, quests: ['q_corridor', 'q_faction_task'], synopsis: '势力任务开始决定格局。' },
+  { day: 25, title: '预兆', weather: 'blizzard', temp: -34, quests: ['q_horde_prep', 'q_final_build'], synopsis: '尸潮预兆出现，防御体系需要提前成型。' },
   { day: 26, title: '囤积', weather: 'extreme_cold', temp: -38, quests: ['q_agri_route'], synopsis: '最后一段可以安稳准备的时间。' },
-  { day: 27, title: '极夜', weather: 'polar_night', temp: -42, quests: ['q_polar', 'q_last_supply'], synopsis: '极夜开始，最终寒潮进入倒计时。' },
-  { day: 28, title: '丧尸潮', weather: 'extreme_cold', temp: -46, quests: ['q_wave1', 'q_after_wave'], synopsis: '大型丧尸潮爆发，所有生存体系接受最终考验。' },
-  { day: 29, title: '最后一夜', weather: 'zombie_tide', temp: -50, quests: ['q_wave2', 'q_alpha', 'q_last_night'], synopsis: '防线与储备同时见底。' },
-  { day: 30, title: '黎明', weather: 'polar_night', temp: -40, quests: ['q_dawn', 'q_survive_30'], synopsis: '黎明到来，根据资源、战力、关系、势力和关键选择计算结局。' },
+  { day: 27, title: '极夜', weather: 'polar_night', temp: -42, quests: ['q_polar', 'q_last_supply'], synopsis: '极夜开始，寒潮进入最深的阶段。' },
+  { day: 28, title: '尸潮', weather: 'extreme_cold', temp: -46, quests: ['q_wave1', 'q_after_wave'], synopsis: '大型尸潮爆发，所有生存体系接受考验。' },
+  { day: 29, title: '最冷的一夜', weather: 'zombie_tide', temp: -50, quests: ['q_wave2', 'q_alpha', 'q_last_night'], synopsis: '防线与储备同时见底。' },
+  { day: 30, title: '冬天没有结束', weather: 'polar_night', temp: -52, quests: ['q_dawn', 'q_survive_30'], synopsis: '第一阶段的尾声。天没有亮——只是雪小了一点，而后面还有更长的冬天。' },
 ];
 
-/** 无尽模式：每过一天回暖 0.3℃，封顶 −16℃；天气与任务沿用第 30 天。 */
-export const ENDLESS_WARM_PER_DAY = 0.3;
-export const ENDLESS_TEMP_CAP = -16;
+/** 三个世界阶段。to: null 表示无限延续。 */
+export const PHASES = [
+  {
+    id: 'P1', name: '极寒降临', from: 1, to: 30, weather: 'hail',
+    tempFrom: -18, tempTo: -52, lootMod: 1, dangerMod: 1,
+    desc: '暴雪频繁，能捡到的东西还算多，人也还没有成群。',
+    tagline: '先活过第一个月。',
+  },
+  {
+    id: 'P2', name: '永冬时代', from: 31, to: 100, weather: 'extreme_cold',
+    tempFrom: -52, tempTo: -66, lootMod: 0.85, dangerMod: 1.25,
+    desc: '温度继续往下掉，城里能翻的东西越来越少，人也开始成队出现。',
+    tagline: '靠的不是运气，是基地。',
+  },
+  {
+    id: 'P3', name: '冰封世界', from: 101, to: null, weather: 'polar_night',
+    tempFrom: -66, tempTo: -78, lootMod: 0.7, dangerMod: 1.5,
+    desc: '极端天气成为常态。只有把基地和科技堆起来的人还留在这座城里。',
+    tagline: '让文明继续。',
+  },
+];
 
+/** 阶段切换的日子（第 2、3 阶段的第 1 天）。 */
+export const PHASE_DAYS = PHASES.map((p) => p.from);
+
+export function phaseOf(day) {
+  const d = Math.max(1, Math.floor(day));
+  return [...PHASES].reverse().find((p) => d >= p.from) ?? PHASES[0];
+}
+
+/** 阶段内的推进进度 0—1（第三阶段按 100 天一个周期滚动，永远不会到 1）。 */
+export function phaseProgress(day) {
+  const p = phaseOf(day);
+  const span = p.to === null ? 100 : p.to - p.from + 1;
+  return Math.min(0.999, Math.max(0, (day - p.from) / span));
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+/**
+ * 当天的章节视图。第一阶段照旧逐日编排；此后由阶段曲线生成：
+ * 气温在阶段内继续下降（不是回暖），天气按阶段的主导天气走。
+ */
 export function chapterOf(day) {
   const d = Math.max(1, Math.floor(day));
-  if (d <= CHAPTERS.length) return CHAPTERS[d - 1];
-  const last = CHAPTERS[CHAPTERS.length - 1];
-  const extra = d - CHAPTERS.length;
+  if (d <= LEGACY_DAYS.length) return { ...LEGACY_DAYS[d - 1], phase: 'P1' };
+  const p = phaseOf(d);
+  const t = phaseProgress(d);
   return {
-    ...last,
     day: d,
-    title: `漫长冬天 · 第 ${extra} 天`,
-    temp: Math.min(ENDLESS_TEMP_CAP, last.temp + extra * ENDLESS_WARM_PER_DAY),
+    phase: p.id,
+    title: `${p.name} · 第 ${d - p.from + 1} 天`,
+    weather: p.weather,
+    temp: Math.round(lerp(p.tempFrom, p.tempTo, t)),
     quests: [],
-    synopsis: '黎明之后冬天开始退，但没有人敢说它不会回来。',
-    endless: true,
+    synopsis: p.desc,
+    phaseTagline: p.tagline,
   };
 }
 
-/** 剧本内容天数（第 30 天）。之后进入无尽模式，不再是结局。 */
-export const TOTAL_DAYS = CHAPTERS.length;
+/** 第一阶段的剧本天数（旧代码里的 TOTAL_DAYS 语义保持不变）。 */
+export const TOTAL_DAYS = LEGACY_DAYS.length;
+
+/**
+ * 兼容别名：第一阶段仍按天编排，界面与旧代码用 CHAPTERS 读它。
+ * 第 31 天之后请用 chapterOf(day)（它会返回阶段生成的当天的章节视图）。
+ */
+export const CHAPTERS = LEGACY_DAYS;
+
+/** 天气与危险的世界级修正（阶段越靠后，资源越少、危险越高）。 */
+export function worldMods(day) {
+  const p = phaseOf(day);
+  return { lootMod: p.lootMod, dangerMod: p.dangerMod, phase: p };
+}

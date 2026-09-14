@@ -1,4 +1,4 @@
-﻿* { box-sizing: border-box; }
+* { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; height: 100%; }
 html { -webkit-tap-highlight-color: transparent; }
 body {
@@ -314,6 +314,27 @@ input.search { width: 100%; min-height: var(--touch); padding: 0 var(--sp-4); bo
 .hero-logo { font-size: 40px; letter-spacing: 0.22em; font-weight: 300; text-align: center; }
 .hero-sub { text-align: center; color: var(--c-dim); letter-spacing: 0.32em; font-size: var(--fs-xs); }
 .snow { position: fixed; inset: 0; pointer-events: none; z-index: 0; opacity: 0.5; }
+
+/* ---------- 动态雪花（无限生存方案 §七：沉浸式界面） ----------
+   只用 transform 动画：GPU 合成、不触发重绘，滚动时也没有额外开销。
+   受两套 reduced-motion 规则约束（全局会把 animation-duration 压到 0.01ms）。
+   图层在最底下（z-index 0），正文容器抬到 1，保证文字永远压得住雪。 */
+.snowfield {
+  position: fixed; inset: -100% 0 0 0; height: 200%; pointer-events: none;
+  z-index: 0; opacity: 0.38; will-change: transform;
+  background-image:
+    radial-gradient(2px 2px at 20px 30px, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(1.6px 1.6px at 120px 90px, rgba(233, 238, 251, 0.8), transparent),
+    radial-gradient(1.2px 1.2px at 70px 160px, rgba(255, 255, 255, 0.6), transparent),
+    radial-gradient(1.8px 1.8px at 190px 40px, rgba(169, 212, 255, 0.7), transparent);
+  background-size: 220px 220px, 180px 180px, 140px 140px, 260px 260px;
+  animation: snowfall 26s linear infinite;
+}
+@keyframes snowfall {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(-32px, 50%, 0); }
+}
+.main { position: relative; z-index: 1; }
 
 /* ---------- 横屏 / 矮屏（手机横放、分屏） ---------- */
 @media (orientation: landscape) and (max-height: 560px) {
