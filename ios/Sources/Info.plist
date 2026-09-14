@@ -37,15 +37,17 @@
 	<false/>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-	</array>
-	<key>UISupportedInterfaceOrientations~ipad</key>
-	<array>
-		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationPortraitUpsideDown</string>
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<!-- 全程横屏：iPad 上要横屏锁定必须声明全屏 -->
+	<key>UIRequiresFullScreen</key>
+	<true/>
 	<!-- 服务器是 http 明文（未备案 IP 上不了 443），必须放开 ATS。
 	     自签名分发不走 App Store 审核，这条没有副作用。 -->
 	<key>NSAppTransportSecurity</key>

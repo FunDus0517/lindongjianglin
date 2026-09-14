@@ -30,6 +30,14 @@
 <!-- 动态雪花：纯 CSS 图层，放在最底层，正文容器 z-index 更高 -->
 <div class="snowfield" aria-hidden="true"></div>
 <div id="app" class="app" aria-live="polite"></div>
+<!-- 全程横屏：竖屏时盖一层提示（纯 CSS 显示，转回横屏自动消失） -->
+<div class="rotate" role="note">
+  <div class="rotate-box">
+    <div class="rotate-ic">📱</div>
+    <div class="rotate-t">请横屏游玩</div>
+    <div class="rotate-s">把手机横过来，基地全景才铺得开</div>
+  </div>
+</div>
 <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
 <div id="layer" class="layer" aria-live="assertive"></div>
 <script type="module" src="./src/main.js"></script>

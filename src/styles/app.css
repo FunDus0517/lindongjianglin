@@ -512,9 +512,25 @@ input.search { width: 100%; min-height: var(--touch); padding: 0 var(--sp-4); bo
   .scene-node { padding: 3px 7px; gap: 3px; font-size: 11px; }
   .scene-node .nm { display: none; }
 }
-/* 横屏矮屏：场景别把整屏吃掉 */
-@media (orientation: landscape) and (max-height: 560px) {
-  .scene { aspect-ratio: auto; height: min(62vh, 320px); }
+/* 横屏的具体尺寸由下面「横屏 HUD」段落统一接管（那里对所有横屏视口生效） */
+
+/* ---------- 全程横屏：竖屏只给一句提示（游戏布局按横屏设计，不做竖屏版） ---------- */
+.rotate { display: none; }
+@media (orientation: portrait) {
+  .rotate {
+    position: fixed; inset: 0; z-index: 9998; display: grid; place-items: center;
+    background:
+      radial-gradient(1200px 700px at 50% -20%, #16233c 0%, transparent 60%), var(--c-bg);
+    text-align: center; padding: var(--sp-5);
+  }
+  .rotate-box { display: grid; gap: 8px; justify-items: center; }
+  .rotate-ic { font-size: 44px; animation: rotateHint 2.6s var(--ease) infinite; }
+  .rotate-t { font-size: var(--fs-xl); font-weight: 700; }
+  .rotate-s { font-size: var(--fs-sm); color: var(--c-dim); }
+}
+@keyframes rotateHint {
+  0%, 40% { transform: rotate(0deg); }
+  60%, 100% { transform: rotate(90deg); }
 }
 
 /* ---------- 横屏 HUD 主视图（设计稿「整体布局图」：左信息栏 + 中央场景 + 右下快捷按钮） ---------- */
@@ -538,7 +554,25 @@ input.search { width: 100%; min-height: var(--touch); padding: 0 var(--sp-4); bo
 .mm-dot.here { border-color: var(--c-mind); box-shadow: 0 0 0 2px var(--c-mind-soft); }
 /* 快捷按钮组默认不显示，横屏才浮出来 */
 .hud-actions { display: none; }
-@media (orientation: landscape) and (max-height: 560px) {
+/* 全程横屏：这套 HUD 对所有横屏视口生效（不再限定"矮屏"，手机/平板/桌面横屏一致） */
+@media (orientation: landscape) {
+  /* 横屏统一用图标栏 + 底部导航（覆盖 ≥900px 那套 PC 侧栏规则） */
+  .app { grid-template-columns: 62px minmax(0, 1fr); grid-template-rows: auto 1fr auto; }
+  .topbar { grid-area: 1 / 1 / 2 / 3; }
+  .side { display: grid; grid-area: 2 / 1 / 4 / 2; align-content: start; gap: 2px; padding: 6px 5px; overflow-y: auto; border-right: 1px solid var(--c-line); background: rgba(10, 17, 32, 0.6); }
+  .side button { display: grid; place-items: center; gap: 3px; width: 100%; min-height: 44px; margin: 0; padding: 4px 0; background: none; border: 0; border-radius: 14px; color: var(--c-text-2); cursor: pointer; transition: background var(--t-fast) var(--ease); }
+  .side button .ic { font-size: 17px; line-height: 1; }
+  .side button span:last-child { font-size: 10px; }
+  .side button[aria-current="page"] { background: var(--c-mind-soft); color: var(--c-mind); }
+  .side button[data-group="main"] { display: none; }
+  .main { grid-area: 2 / 2 / 3 / 3; }
+  .bottomnav { display: grid; grid-area: 3 / 2 / 4 / 3; }
+  /* 横屏 HUD 要铺满整屏：取消 .page 的 900px 上限（那是竖屏列表时代的排版约束） */
+  .page {
+    max-width: none; margin: 0;
+    padding: 8px max(var(--sp-4), env(safe-area-inset-right)) calc(var(--nav-h) + var(--safe-b) + 12px) max(var(--sp-4), env(safe-area-inset-left));
+  }
+
   .hud-page { display: grid; grid-template-columns: 206px minmax(0, 1fr); gap: 10px; align-items: start; }
   .hud-side { order: 0; }
   .hud-main { grid-column: 2; }
