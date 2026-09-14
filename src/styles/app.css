@@ -479,6 +479,8 @@ input.search { width: 100%; min-height: var(--touch); padding: 0 var(--sp-4); bo
 }
 .scene-img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .scene-img.missing { display: none; }
+/* 画布层：等于美术图比例的那块"真正贴着图"的区域，节点与角标都挂在这里 */
+.scene-canvas { position: absolute; inset: 0; overflow: hidden; }
 .scene-nodes { position: absolute; inset: 0; }
 .scene-node {
   position: absolute; transform: translate(-50%, -50%);
@@ -540,11 +542,20 @@ input.search { width: 100%; min-height: var(--touch); padding: 0 var(--sp-4); bo
   .hud-page { display: grid; grid-template-columns: 206px minmax(0, 1fr); gap: 10px; align-items: start; }
   .hud-side { order: 0; }
   .hud-main { grid-column: 2; }
-  /* 中央场景按 16:9 铺满可视高度并居中——保持 16:9 是为了让节点百分比坐标仍然对准美术图 */
+  /* 中央场景按设计稿铺满中央区（不要卡片感）：外框顶边、去圆角去描边，
+     画布层按美术图比例 cover 撑满，节点百分比仍对着图。 */
   .hud-main > .scene {
-    height: min(66vh, 300px); width: auto; aspect-ratio: 16 / 9;
-    margin-left: auto; margin-right: auto;
+    /* 正好铺满可视中央区：视口高 - 顶栏 80 - 底栏 61 - 上下留白，避免场景被底部裁掉 */
+    height: calc(100dvh - 166px); min-height: 200px;
+    width: 100%; aspect-ratio: auto;
+    border: 0; border-radius: 0; box-shadow: none;
+    background: linear-gradient(165deg, #16233c, #0a1120 55%, #060911);
   }
+  .hud-main > .scene > .scene-canvas {
+    position: absolute; inset: 0; margin: auto;
+    aspect-ratio: 1672 / 941; min-width: 100%; min-height: 100%;
+  }
+  .hud-main > .scene > .scene-canvas > .scene-img { object-fit: fill; }
   .hud-actions {
     display: flex; flex-direction: column; gap: 8px;
     /* 必须用 fixed：正文区是内部滚动容器，absolute 会把它钉到整页内容的最底部（屏幕上根本看不到） */

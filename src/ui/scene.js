@@ -59,32 +59,35 @@ export function sceneView(state, { onPick } = {}) {
   const built = Base.FACILITIES.filter((f) => Base.level(state, f.id) > 0).length;
 
   return h('div', { class: 'scene' },
-    h('img', {
-      class: 'scene-img',
-      src: SCENE_SRC,
-      alt: '基地全景（美术图）',
-      draggable: 'false',
-      loading: 'lazy',
-      onError: (e) => e.target?.classList?.add('missing'),
-    }),
-    h('div', { class: 'scene-nodes' }, Base.FACILITIES.map((f) => {
-      const lv = Base.level(state, f.id);
-      const st = statusOf(state, f, lv);
-      const [x, y] = NODE_POS[f.id] ?? [50, 50];
-      return h('button', {
-        type: 'button',
-        class: ['scene-node', st.cls],
-        style: { left: `${x}%`, top: `${y}%` },
-        title: `${f.name}：${lv > 0 ? `Lv.${lv}` : '未建成'}｜${f.desc}`,
-        onClick: (e) => { e.stopPropagation(); onPick?.(f.id); },
-      },
-      h('span', { class: 'ic' }, f.icon),
-      h('span', { class: 'nm' }, f.name),
-      h('span', { class: 'lv' }, lv > 0 ? `Lv.${lv}` : st.text));
-    })),
-    h('div', { class: 'scene-cap' },
-      h('span', null, `${form.icon} ${form.name}`),
-      h('span', { class: 'muted' }, `设施 ${built} / ${Base.FACILITIES.length}`)));
+    /* .scene-canvas 是"等于美术图比例"的画布：横屏铺满时它按 cover 撑满外框，
+       节点/角标都挂在这层里，所以百分比坐标永远对着图，不会被裁偏。 */
+    h('div', { class: 'scene-canvas' },
+      h('img', {
+        class: 'scene-img',
+        src: SCENE_SRC,
+        alt: '基地全景（美术图）',
+        draggable: 'false',
+        loading: 'lazy',
+        onError: (e) => e.target?.classList?.add('missing'),
+      }),
+      h('div', { class: 'scene-nodes' }, Base.FACILITIES.map((f) => {
+        const lv = Base.level(state, f.id);
+        const st = statusOf(state, f, lv);
+        const [x, y] = NODE_POS[f.id] ?? [50, 50];
+        return h('button', {
+          type: 'button',
+          class: ['scene-node', st.cls],
+          style: { left: `${x}%`, top: `${y}%` },
+          title: `${f.name}：${lv > 0 ? `Lv.${lv}` : '未建成'}｜${f.desc}`,
+          onClick: (e) => { e.stopPropagation(); onPick?.(f.id); },
+        },
+        h('span', { class: 'ic' }, f.icon),
+        h('span', { class: 'nm' }, f.name),
+        h('span', { class: 'lv' }, lv > 0 ? `Lv.${lv}` : st.text));
+      })),
+      h('div', { class: 'scene-cap' },
+        h('span', null, `${form.icon} ${form.name}`),
+        h('span', { class: 'muted' }, `设施 ${built} / ${Base.FACILITIES.length}`))));
 }
 
 export default sceneView;

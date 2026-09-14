@@ -3,6 +3,6 @@
  * 每次发布请把 BUILD 改成发布时的日期时间（本地时间），并在提交信息里写清楚。
  * @module data/build
  */
-export const BUILD = '2026-09-14 14:38';
+export const BUILD = '2026-09-14 15:25';
 export const VERSION = 'V3.2';
 export const LABEL = `${VERSION} · 构建 ${BUILD}`;
