@@ -390,3 +390,21 @@ test('剧情：第 1 天之后不再按天排队，但剧情仍会按解锁顺�
   assert.ok(Story.minDayOf(found) <= s.day, `抽到的事件（${found}）不应该还没到日子`);
   assert.ok(TOTAL_DAYS === 30);
 });
+
+test('地图：道路可以被封，绕行更慢，到期自动恢复', () => {
+  const s = fresh();
+  s.day = 30;
+  s.location = 'supermarket';
+  const before = WorldMap.travelMinutes(s, 'hospital');
+  assert.equal(WorldMap.connected(s, 'industry', 'north').ok, true, '一开始路是通的');
+  WorldMap.block(s, 'market_north', 3, '暴雪封路');
+  const st = WorldMap.routeState(s, 'market_north');
+  assert.equal(st.blocked, true);
+  assert.equal(st.why, '暴雪封路');
+  assert.match(WorldMap.connected(s, 'market', 'north').reason, /暴雪封路/, '必须说清为什么走不了');
+  assert.ok(WorldMap.travelMinutes(s, 'hospital') > before, '直通的路断了必须绕行更慢');
+  s.day += 4;
+  assert.equal(WorldMap.routeState(s, 'market_north').blocked, false, '到期必须自动恢复');
+  const round = Save.restore(Save.serialize(s));
+  assert.ok(round.state.roads, '道路状态必须进存档');
+});

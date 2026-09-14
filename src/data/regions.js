@@ -40,3 +40,26 @@ export const PLACES = {
 
 export const region = (id) => REGIONS.find((r) => r.id === id) ?? REGIONS[0];
 export const place = (id) => PLACES[id] ?? PLACES.apartment;
+
+/**
+ * 区域之间的道路（V3.0 策划案 §十四：大型地图）。
+ * 每条路可以被**动态阻断**：暴雪封路、尸潮占道、检查站戒严。
+ * 阻断只影响"能不能走这条路"，不会删掉区域本身。
+ */
+export const ROUTES = [
+  { id: 'home_market', from: 'home', to: 'market', name: '和平路', tiles: 3 },
+  { id: 'market_industry', from: 'market', to: 'industry', name: '环城高架', tiles: 3 },
+  { id: 'industry_north', from: 'industry', to: 'north', name: '城北大道', tiles: 4 },
+  { id: 'north_mountain', from: 'north', to: 'mountain', name: '盘山公路', tiles: 5 },
+  { id: 'home_industry', from: 'home', to: 'industry', name: '老铁路', tiles: 4 },
+  { id: 'market_north', from: 'market', to: 'north', name: '医院支路', tiles: 4 },
+];
+
+/** 阻断原因（写进 state.roads[routeId] = { until: 天数, why: '暴雪封路' }）。 */
+export const BLOCK_REASONS = {
+  blizzard: '暴雪封路',
+  horde: '尸潮占道',
+  check: '检查站戒严',
+};
+
+export const route = (id) => ROUTES.find((r) => r.id === id) ?? null;

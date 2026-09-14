@@ -27,6 +27,7 @@ import * as Story from './Story.js';
 import * as Survival from './Survival.js';
 import * as Tech from './Tech.js';
 import * as Weather from './Weather.js';
+import * as WorldMap from './Map.js';
 
 export const DAY_START = 360;   // 06:00
 export const NIGHT = 1320;      // 22:00
@@ -108,6 +109,20 @@ export function rollDay(state) {
   Quest.refresh(state);
   Market.refresh(state);
   Story.onNewDay(state);
+
+  // 道路阻断（V3.0 §十四）：恶劣天气与尸潮会封路，确定性触发
+  if (state.weather === 'blizzard' || state.weather === 'extreme_cold' || state.weather === 'zombie_tide') {
+    const pool = WorldMap.routes(state).filter((r) => !r.blocked);
+    if (pool.length > 0 && state.day % 4 === 0) {
+      const pick = pool[state.day % pool.length];
+      WorldMap.block(state, pick.id, 2 + (state.day % 2), state.weather === 'zombie_tide' ? '尸潮占道' : '暴雪封路');
+      notes.push(`${pick.name}${state.weather === 'zombie_tide' ? '被尸潮占道' : '被大雪封住'}，这几天得绕路。`);
+    }
+  }
+  // 清掉已经过期很久的记录，别让存档无限增长
+  if (state.roads) {
+    for (const [id, rec] of Object.entries(state.roads)) if ((rec.until ?? 0) < state.day - 5) delete state.roads[id];
+  }
 
   // 晨报：天气预测 + 基地检查（方案 §八「生存循环」的早晨段）
   const fc = Weather.forecast(state);

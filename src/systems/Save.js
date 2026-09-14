@@ -51,6 +51,7 @@ export function createState(seed = Math.floor(Math.random() * 1e9)) {
     death: { deaths: 0, recent: [] },   // 倒地记录 + 最近入账（倒地会丢这一批）
     tech: {},                            // 科技树：heat / power / explore / defense / loop
     crew: {},                            // 排班：npcId → 工种
+    roads: {},                           // 道路阻断：routeId → { until, why }
     npcs,
     factions,
     fame: 0,
@@ -109,6 +110,7 @@ export function restore(raw) {
   merged.death.deaths = Number(merged.death.deaths) || 0;
   merged.tech = { ...(data.tech ?? {}) };
   merged.crew = { ...(data.crew ?? {}) };
+  merged.roads = { ...(data.roads ?? {}) };
   merged.enhance = { ...base.enhance, ...(data.enhance ?? {}) };
   merged.inventory = { ...(data.inventory ?? {}) };
   merged.flags = { ...(data.flags ?? {}) };

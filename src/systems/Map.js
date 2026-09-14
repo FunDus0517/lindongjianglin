@@ -4,7 +4,7 @@
  * 移动只改 state.location 与时间/体温，所有消耗仍走统一的 Outcome 结算入口。
  * @module systems/Map
  */
-import { PLACES, REGIONS, place, region } from '../data/regions.js';
+import { PLACES, REGIONS, ROUTES, place, region, route } from '../data/regions.js';
 import { location } from '../data/locations.js';
 import * as Weather from './Weather.js';
 import { clamp } from '../core/util.js';
@@ -24,12 +24,57 @@ export function distance(fromId, toId) {
 /** 当前地点（没有记录就从自家公寓算起）。 */
 export const currentPlace = (state) => (state.location && PLACES[state.location] ? state.location : 'apartment');
 
-/** 移动耗时：距离 × 每格时间 × 天气系数。 */
+/* ---------------- 道路与阻断（V3.0 §十四） ---------------- */
+
+/** 道路状态：是否阻断、还剩几天、为什么。 */
+export function routeState(state, routeId) {
+  const rec = state.roads?.[routeId];
+  if (!rec) return { blocked: false, until: 0, why: null };
+  const left = (rec.until ?? 0) - state.day;
+  return left > 0 ? { blocked: true, until: rec.until, left, why: rec.why ?? '道路不通' } : { blocked: false, until: rec.until, why: null };
+}
+
+export const routes = (state) => ROUTES.map((r) => ({ ...r, ...routeState(state, r.id) }));
+
+/** 阻断一条路（由灾害/事件调用；确定性，不消耗随机数）。 */
+export function block(state, routeId, days, why = '道路不通') {
+  const r = route(routeId);
+  if (!r) return null;
+  state.roads = state.roads ?? {};
+  const until = state.day + Math.max(1, Math.round(days));
+  const prev = state.roads[routeId];
+  // 已经阻断的更久就不缩短
+  if (prev && (prev.until ?? 0) >= until) return prev;
+  state.roads[routeId] = { until, why };
+  return state.roads[routeId];
+}
+
+/** 两个区域之间是否还有能走的路。 */
+export function connected(state, fromRegion, toRegion) {
+  const list = ROUTES.filter((r) =>
+    (r.from === fromRegion && r.to === toRegion) || (r.from === toRegion && r.to === fromRegion));
+  if (list.length === 0) return { ok: false, reason: '没有直通的路' };
+  const open = list.filter((r) => !routeState(state, r.id).blocked);
+  if (open.length > 0) return { ok: true, route: open[0] };
+  const b = routeState(state, list[0].id);
+  return { ok: false, reason: `${list[0].name}${b.why}（还有 ${b.left} 天）` };
+}
+
+/** 移动耗时：距离 × 每格时间 × 天气系数。跨区还要看路通不通、绕行加时。 */
 export function travelMinutes(state, toId) {
-  const tiles = distance(currentPlace(state), toId);
+  const from = currentPlace(state);
+  const tiles = distance(from, toId);
   if (tiles === 0) return 0;
   const w = Weather.weather(state.weather);
-  return Math.max(10, Math.round(tiles * MINUTES_PER_TILE * w.minutesMod));
+  let base = tiles * MINUTES_PER_TILE * w.minutesMod;
+  const a = place(from).region;
+  const b = place(toId).region;
+  if (a !== b) {
+    const link = connected(state, a, b);
+    // 直通的路断了就得绕：耗时 +60%
+    if (link.ok === false && link.reason !== '没有直通的路') base *= 1.6;
+  }
+  return Math.max(10, Math.round(base));
 }
 
 /** 该地点是否已解锁；返回 true 或原因。 */

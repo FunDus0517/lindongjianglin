@@ -129,6 +129,8 @@ export function ActionPage(ctx) {
       r.places.length === 0 ? empty('这一片还没有可去的地方。') : null,
     ], { cls: 'flat' }))),
 
+    h('div', { class: 'row wrap', style: { gap: '6px', marginBottom: '8px' } }, WorldMap.routes(state).map((r) => tag(r.blocked ? r.name + r.why + '（' + r.left + ' 天）' : r.name, r.blocked ? 'bad' : ''))),
+
     sectionTitle('地点卡', h('span', { class: 'xs muted' }, `${list.length} 个可进入 · 点开看详情`)),
     h('div', { class: 'col' }, list.map((loc) => locationRow(ctx, state, loc))),
 
