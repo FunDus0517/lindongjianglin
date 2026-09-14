@@ -25,14 +25,19 @@ async function walk(dir, base = dir, out = []) {
 
 const files = (await walk(srcDir)).sort();
 const bundle = {};
+const skipped = [];
 const hash = createHash('sha256');
 let rawBytes = 0;
 
 for (const rel of files) {
   const full = join(srcDir, rel);
   const info = await stat(full);
-  if (info.size > 2 * 1024 * 1024) throw new Error(`文件过大，不适合放进清单：${rel}`);
-  const text = await readFile(full, 'utf8');
+  // 清单是「一堆文本文件」的 JSON（iOS 侧直接 Data(utf8) 写盘），所以只收文本。
+  // 二进制资源（如中央场景图 assets/*.png）跳过并明确报出来——不能让整条 App 更新链断掉。
+  if (info.size > 2 * 1024 * 1024) { skipped.push(`${rel}（${(info.size / 1048576).toFixed(1)} MB，超 2 MB）`); continue; }
+  const buf = await readFile(full);
+  const text = buf.toString('utf8');
+  if (text.includes('\uFFFD')) { skipped.push(`${rel}（二进制）`); continue; }
   bundle[rel] = text;
   hash.update(rel).update(text);
   rawBytes += info.size;
@@ -45,6 +50,10 @@ await writeFile(outFile, JSON.stringify(payload), 'utf8');
 const size = (await stat(outFile)).size;
 console.log(`清单已生成：${outFile}`);
 console.log(`  版本   : ${version}`);
-console.log(`  文件数 : ${files.length}`);
+console.log(`  文件数 : ${files.length - skipped.length}（跳过 ${skipped.length}）`);
 console.log(`  原始   : ${(rawBytes / 1024).toFixed(0)} KB`);
 console.log(`  清单   : ${(size / 1024).toFixed(0)} KB（gzip 后由服务器自动压缩）`);
+if (skipped.length) {
+  console.log('  跳过的非文本资源（App 离线包不带，站点原样照样能用）：');
+  for (const s of skipped) console.log(`    - ${s}`);
+}

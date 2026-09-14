@@ -6,6 +6,7 @@
 import { h } from '../core/dom.js';
 import { btn, card, empty, logItem, modal, progress, sectionTitle, tag } from '../ui/components.js';
 import { statGrid } from '../ui/shell.js';
+import { sceneView } from '../ui/scene.js';
 import { fmtDuration } from '../core/util.js';
 import { capacity, countCategory, used } from '../systems/Inventory.js';
 import { condition } from '../systems/Survival.js';
@@ -89,6 +90,9 @@ export function Game(ctx) {
           btn('跳过引导', { kind: 'ghost', sm: true, onClick: () => { Tutorial.skip(state); ctx.refresh(); } })),
       ], { cls: 'mind' })
       : null,
+
+    // 中央场景：美术图整图贴底 + 建筑节点（点节点进基地页；升级仍走基地页的设施详情）
+    sceneView(state, { onPick: () => ctx.go('base') }),
 
     // 光脑 AI 助手（方案 §十）：天气预测 / 资源分析 / 危险预警 / 生存建议
     card([

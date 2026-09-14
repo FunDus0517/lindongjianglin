@@ -371,11 +371,11 @@ test('UI：重复切换页面不累积 DOM 节点（无渲染泄漏）', async (
   assert.ok(main, '应用外壳必须包含内容区');
   const count = (node) => [...node.walk()].length;
 
-  clickText(app, '仓库');
+  clickNav(app, '背包');
   const base = count(main);
   for (let i = 0; i < 15; i++) {
-    clickText(app, '主页');
-    clickText(app, '仓库');
+    clickNav(app, '基地');
+    clickNav(app, '背包');
   }
   const after = count(main);
   assert.ok(after <= base * 1.5 + 20, `重复渲染后节点数不应持续增长：${base} → ${after}`);
@@ -598,6 +598,17 @@ const clickText = (root, text) => {
   return el;
 };
 
+/** 点底部导航里的某一项：页面正文里常有同名按钮（如“基地管理”），不能靠 clickText 撞运气。 */
+const clickNav = (root, text) => {
+  const el = [...root.walk()].find((n) => n.tagName === 'BUTTON'
+    && String(n.parentNode?.className ?? '').includes('bottomnav')
+    && n.allText.includes(text));
+  assert.ok(el, `底部导航里没有「${text}」`);
+  assert.ok((el.handlers.click ?? []).length > 0, `导航「${text}」没有绑定处理函数（死导航）`);
+  el.click();
+  return el;
+};
+
 test('引导：无存档时 main.js 渲染沉浸式启动页，开始生存后进入第 1 天开场事件', async () => {
   await import('../src/main.js');
   await flush();
@@ -626,10 +637,10 @@ test('引导：事件结算后进入主界面，导航可切到仓库与光脑',
   }
   assert.match(app.allText, /生存状态|今日任务/, '剧情结束后必须回到主界面');
 
-  clickText(app, '仓库');
+  clickNav(app, '背包');
   await flush();
   assert.match(app.allText, /剩余容量/, '导航必须能切到仓库页');
-  clickText(app, '光脑');
+  clickNav(app, '光脑');
   await flush();
   assert.match(app.allText, /小管家/, '导航必须能切到光脑页');
   clickText(app, '任务');
@@ -642,12 +653,12 @@ test('按需加载：首屏只加载首页模块，切页后其余页面才按�
   const app = document.getElementById('app');
   // 预取是异步的（requestIdleCallback/setTimeout 在垫片里不执行），
   // 所以这里验证的是「页面切换靠动态 import 完成，且失败时给出可读提示」。
-  clickText(app, '人物');
+  clickNav(app, '队伍');
   await flush();
   assert.match(app.allText, /联系人|还没有遇到任何人/, '按需加载的页面切换后必须真正渲染');
   assert.equal(router.current().name, 'characters');
 
-  clickText(app, '主页');
+  clickNav(app, '基地');
   await flush();
   assert.equal(router.current().name, 'game');
   assert.match(app.allText, /生存状态|今日任务/, '切回主页必须立即渲染（模块已缓存）');
@@ -662,7 +673,8 @@ test('UI：基地视觉化（V11）—— 建筑格显示等级刻度与状态�
   const page = pages.Base(ctx);
   const text = page.allText;
 
-  assert.match(text, /基地地图/, '必须有基地地图区块');
+  assert.match(text, /基地全景/, '必须有基地全景区块（等距美术图 + 建筑节点）');
+  assert.match(text, /设施明细/, '必须有设施明细区块（每处设施一行，.item 契约）');
   assert.match(text, /基地形态|临时营地|木屋基地|地下避难所|钢铁堡垒|地下城市/, 'HUD 必须说明基地形态');
 
   // 每处设施一格，格子里有 10 格刻度，点亮数等于当前等级

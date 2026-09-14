@@ -8,6 +8,7 @@
  */
 import { h } from '../core/dom.js';
 import { btn, card, empty, progress, sectionTitle, sheet, tag } from '../ui/components.js';
+import { sceneView } from '../ui/scene.js';
 import { item } from '../data/items.js';
 import * as Base from '../systems/Base.js';
 import * as Inventory from '../systems/Inventory.js';
@@ -68,8 +69,13 @@ export function BasePage(ctx) {
         : h('div', { class: 'xs', style: { marginTop: '4px', color: 'var(--c-good)' } }, '已经是最高形态。文明还在。'),
     ], { cls: 'mind' }),
 
+    // ── 基地全景（等距美术图 + 可点建筑节点）：点节点直接开这处设施的详情卡
+    sectionTitle('基地全景', h('span', { class: 'xs muted' }, '点建筑开详情 · 图上的楼与设施一一对应')),
+    sceneView(state, { onPick: (id) => openFacility(ctx, id) }),
+
     // ── 基地地图（V11：建筑可视化，点建筑开详情）
-    sectionTitle('基地地图', h('span', { class: 'xs muted' }, `点建筑升级 · 上限 ${Base.MAX_LEVEL} 级`)),
+    //    这里保留"每处设施一行 .item"的契约（UI 与审计测试都依赖它），同时承担明细职责
+    sectionTitle('设施明细', h('span', { class: 'xs muted' }, `点建筑升级 · 上限 ${Base.MAX_LEVEL} 级`)),
     h('div', { class: 'base-grid' }, Base.FACILITIES.map((f, i) => {
       const lv = Base.level(state, f.id);
       const cost = Base.upgradeCost(state, f.id);
