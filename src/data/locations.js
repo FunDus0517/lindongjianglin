@@ -59,6 +59,17 @@ export const LOCATIONS = {
     },
   },
   /* ---------------- 第三阶段（冰封世界，第 101 天起） ---------------- */
+  science_station: {
+    id: 'science_station', name: '雪山观测站', icon: '🛰️', danger: 4, indoor: true, unlockDay: 76,
+    desc: '半山腰的科研站，天线还立着。门禁是电子的，但备用电源早就耗光了——门虚掩着。',
+    events: [],
+    actions: {
+      search: { loot: [['blueprint', 0, 2, 0.5], ['parts', 1, 2, 0.6], ['battery', 0, 2, 0.5]], note: '翻实验台和器材柜。' },
+      investigate: { loot: [['blueprint', 1, 2, 0.6], ['insulation', 1, 2, 0.4]], note: '读取服务器里剩下的记录。' },
+      explore: { loot: [['parts', 2, 3, 0.6], ['medicine', 0, 2, 0.4], ['hunting_rifle', 0, 1, 0.15]], note: '下到地下样本层。' },
+      retreat: { loot: [], note: '退回缆车站。' },
+    },
+  },
   ice_cathedral: {
     id: 'ice_cathedral', name: '冰封穹顶', icon: '⛪', danger: 5, indoor: true, unlockDay: 101,
     desc: '体育馆的穹顶被冰压成了一个巨大的白色穹隆，里面像一个没有人的教堂。回声很长。',

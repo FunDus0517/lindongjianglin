@@ -39,6 +39,7 @@ function openNpc(ctx, id) {
           h('div', { class: 'row between' }, h('span', { class: 'xs muted' }, '目标'), h('span', { class: 'xs', style: { maxWidth: '68%', textAlign: 'right' } }, c.goal)),
           h('div', { class: 'row between' }, h('span', { class: 'xs muted' }, '当前状态'), h('span', { class: 'xs' }, NPC.statusOf(state, id).label)),
           h('div', { class: 'row between' }, h('span', { class: 'xs muted' }, '职务'), h('span', { class: 'xs' }, r.role ?? '—')),
+          h('div', { class: 'row between' }, h('span', { class: 'xs muted' }, '健康'), h('span', { class: 'xs', style: { color: (r.health ?? 100) < 50 ? 'var(--c-bad)' : '' } }, `${Math.round(r.health ?? 100)} / 100`)),
           h('div', { class: 'row between' }, h('span', { class: 'xs muted' }, '成长'), h('span', { class: 'xs' }, `${r.crewXp ?? 0} 点${(r.injured ?? 0) > 0 ? `｜还需养伤 ${r.injured} 天` : ''}`)),
           h('div', { class: 'row between' }, h('span', { class: 'xs muted' }, '剧情 Flag'), h('span', { class: 'xs' }, Object.keys(state.flags).filter((f) => f.includes(id.slice(0, 5))).length + ' 项'))),
         sectionTitle('互动'),

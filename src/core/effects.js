@@ -7,6 +7,7 @@ import { toast, pulse } from './store.js';
 import { clamp, signed } from './util.js';
 import { item } from '../data/items.js';
 import * as Achievement from '../systems/Achievement.js';
+import * as Base from '../systems/Base.js';
 import * as Battle from '../systems/Battle.js';
 import * as Daily from '../systems/Daily.js';
 import * as Death from '../systems/Death.js';
@@ -67,7 +68,8 @@ export function applyOutcome(state, outcome, opts = {}) {
     for (const [id, n] of Object.entries(outcome.kills)) state.kills[id] = (state.kills[id] ?? 0) + n;
   }
   if (outcome.aid) {
-    state.aid.members = clamp(state.aid.members + (outcome.aid.members ?? 0), 0, 20);
+    // 居民区决定能容纳多少幸存者（V3.0 策划案 §五）
+    state.aid.members = clamp(state.aid.members + (outcome.aid.members ?? 0), 0, Base.housingCap(state) + 12);
     state.aid.morale = clamp(state.aid.morale + (outcome.aid.morale ?? 0), 0, 100);
     for (const id of outcome.aid.join ?? []) if (!state.aid.joined.includes(id)) state.aid.joined.push(id);
   }

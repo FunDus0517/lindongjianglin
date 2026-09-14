@@ -295,15 +295,18 @@ export function growCrew(state) {
     r.role = r.role ?? ladderFor(c.id)[0];
     r.crewXp = r.crewXp ?? 0;
     r.injured = r.injured ?? 0;
+    // 健康（V3.0 策划案 §七：NPC 拥有独立属性：健康 / 技能 / 信任 / 心理状态）
+    r.health = clamp(r.health ?? 100, 0, 100);
     if (!r.alive || r.left || r.joinFaction) continue;
 
-    // 1) 受伤：每天推进；有药等于在治疗（扣掉一天累计）
+    // 1) 受伤：每天推进；有药等于在治疗（扣掉一天累计，并恢复健康）
     if (r.injured > 0) {
       r.injured -= 1;
       r.hurtDays = (r.hurtDays ?? 0) + 1;
+      r.health = clamp(r.health - 12, 0, 100);
       r.stress = clamp((r.stress ?? 0) + 2, 0, 100);
-      if (hasMedicine) r.hurtDays = Math.max(0, r.hurtDays - 1);
-      if (r.hurtDays >= DEATH_AFTER_INJURED_DAYS) {
+      if (hasMedicine) { r.hurtDays = Math.max(0, r.hurtDays - 1); r.health = clamp(r.health + 10, 0, 100); }
+      if (r.health <= 0 || r.hurtDays >= DEATH_AFTER_INJURED_DAYS) {
         r.alive = false;
         state.aid.morale = clamp((state.aid?.morale ?? 0) - 15, 0, 100);
         state.aid.joined = (state.aid.joined ?? []).filter((x) => x !== c.id);
@@ -315,6 +318,8 @@ export function growCrew(state) {
       if (r.injured === 0) { notes.push(`${c.name}的伤好了，重新开始干活。`); r.hurtDays = 0; }
       continue;   // 受伤期间不参与成长与产出
     }
+    // 没受伤时健康缓慢恢复
+    if (r.health < 100) r.health = clamp(r.health + 3, 0, 100);
 
     // 2) 成长与转职：基地越大，能学的东西越多
     r.crewXp += 1 + Math.floor(total / 12);
@@ -326,9 +331,9 @@ export function growCrew(state) {
       if (r.crewXp >= XP_PER_ROLE * 3) state.flags[`veteran_${c.id}`] = true;
     }
 
-    // 3) 受伤：基地防御不足时每隔几天出事（确定性）
-    const every = defense >= 4 ? 12 : defense >= 2 ? 8 : 5;
-    if (state.day % every === 0 && (r.stress ?? 0) > 45) {
+    // 3) 受伤：基地防御与居民区条件越差越容易出事（确定性，不消耗随机数）
+    const injuryEvery = (defense >= 4 ? 12 : defense >= 2 ? 8 : 5) + (state.base?.housing ?? 0);
+    if (state.day % injuryEvery === 0 && (r.stress ?? 0) > 45) {
       r.injured = INJURY_DAYS;
       r.hurtDays = 0;
       r.stress = clamp((r.stress ?? 0) + 8, 0, 100);

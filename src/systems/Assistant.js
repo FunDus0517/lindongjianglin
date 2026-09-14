@@ -74,11 +74,28 @@ export function assistant(state) {
   if ((state.stats.mind ?? 100) < 50) advice.push('和人说说话、或者睡一觉，精神掉太多会让选项变少。');
   if (advice.length === 0) advice.push('状态不错。趁天气好出去搜刮，或者推进科技。');
 
+  /* 5. 基地管理辅助（V3.0 策划案 §十二） */
+  const nextForm = Base.nextForm(state);
+  const cheapest = Base.FACILITIES
+    .map((f) => ({ f, lv: Base.level(state, f.id), cost: Base.upgradeCost(state, f.id) }))
+    .filter((r) => r.cost && r.lv < r.f.max)
+    .sort((a, b) => a.cost.minutes - b.cost.minutes)[0] ?? null;
+  const manage = [];
+  if (nextForm) {
+    manage.push(`下一个形态「${nextForm.name}」：${nextForm.hint ?? ''}${nextForm.gap?.levels ? `｜设施等级还差 ${nextForm.gap.levels}` : ''}`);
+  } else {
+    manage.push('基地已经是最高形态，接下来靠科技与幸存者把文明维持住。');
+  }
+  if (cheapest) manage.push(`今天最省时的升级是「${cheapest.f.name}」（${cheapest.cost.minutes} 分钟，Lv.${cheapest.lv} → ${cheapest.lv + 1}）。`);
+  manage.push(`今日升级额度还剩 ${Base.upgradesLeft(state)} / ${Base.DAILY_UPGRADE_LIMIT} 次。`);
+  if (tech.length > 0) manage.push(`可研究科技：${tech.slice(0, 2).map((t) => `${t.icon}${t.name}（${t.available ? '现在就能做' : t.reason}）`).join('、')}`);
+
   return {
     weather,
     resources,
     danger: danger.slice(0, 4),
     advice: advice.slice(0, 3),
+    manage,
     dangerLevel: danger.length > 1 ? 'warn' : 'good',
   };
 }

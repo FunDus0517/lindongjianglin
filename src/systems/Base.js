@@ -39,7 +39,17 @@ export const FACILITIES = [
   { id: 'workshop', name: '加工设施', icon: '🔨', desc: '解锁加工配方，高级后提升产量。', max: MAX_LEVEL,
     cost: (l) => ({ metal: l, parts: Math.ceil(l / 2) + 1 }), minutes: (l) => 90 + 30 * l,
     effect: (l) => `解锁 ${cap(l, 3)} 级配方｜每次加工额外产出 +${cap(Math.max(l - 3, 0), 2)}` },
+  // V3.0 策划案 §五：建设内容里点名了研究室与居民区域
+  { id: 'research', name: '研究室', icon: '🔬', desc: '缩短科技研究时间，并提高找到蓝图的机会。', max: MAX_LEVEL,
+    cost: (l) => ({ parts: l + 1, metal: l, blueprint: l >= 4 ? 1 : 0 }), minutes: (l) => 120 + 40 * l,
+    effect: (l) => `研究耗时 −${cap(l, 8) * 8}%｜蓝图概率 +${cap(l, 5) * 10}%` },
+  { id: 'housing', name: '居民区', icon: '🛏️', desc: '容纳更多幸存者，降低他们受伤的概率。', max: MAX_LEVEL,
+    cost: (l) => ({ wood: l + 1, insulation: l }), minutes: (l) => 90 + 30 * l,
+    effect: (l) => `可容纳 ${2 + l * 3} 人｜受伤间隔 +${cap(l, 6)} 天` },
 ];
+
+/** 居民区决定的幸存者容量（互助体系人数上限）。 */
+export const housingCap = (state) => 2 + level(state, 'housing') * 3;
 
 export const facility = (id) => FACILITIES.find((f) => f.id === id);
 export const RECIPES_COUNT = RECIPES.length;
@@ -123,7 +133,13 @@ export function craft(state, recipeId) {
   const r = RECIPES.find((x) => x.id === recipeId);
   const ok = canCraft(state, recipeId);
   if (ok !== true) return { ok: false, reason: ok };
-  const changes = { ...Object.fromEntries(Object.entries(r.in).map(([k, v]) => [k, -v])), ...r.out };
+  // 循环科技（水循环）：烧雪取水多出几份
+  const out = { ...r.out };
+  if (r.id === 'melt_water') {
+    const loop = Tech.bonus(state).waterLoop;
+    if (loop > 0) out.purified = (out.purified ?? 0) + loop;
+  }
+  const changes = { ...Object.fromEntries(Object.entries(r.in).map(([k, v]) => [k, -v])), ...out };
   const applied = applyItems(state, changes);
   if (!applied.ok) return applied;
   return { ok: true, minutes: r.minutes, notes: [`加工完成：${r.name}。`], toasts: [{ text: `产出 ${r.name}`, kind: 'good' }], daily: { craft: 1 } };
@@ -133,7 +149,8 @@ export function craft(state, recipeId) {
 export function dailySettlement(state) {
   const notes = [];
   const changes = {};
-  const gh = level(state, 'greenhouse') + enhanceLevel(state, 'greenhouse');
+  // 温室：循环科技（食物保存）每 2 级 +1 份
+  const gh = level(state, 'greenhouse') + enhanceLevel(state, 'greenhouse') + Math.floor(Tech.bonus(state).foodSave / 2);
   if (gh > 0) changes.produce = (changes.produce ?? 0) + gh;
 
   const heat = level(state, 'heating');
@@ -182,23 +199,28 @@ export const totalLevels = (state) =>
  */
 export const FORMS = [
   {
-    id: 'cabin', name: '木屋', icon: '🏚️', desc: '挡风、能睡、能烧水。就这些。',
+    id: 'camp', name: '临时营地', icon: '⛺', desc: '几块木板加一层塑料布。能挡风，不代表安全。',
     need: () => true,
   },
   {
+    id: 'cabin', name: '木屋基地', icon: '🏚️', desc: '挡风、能睡、能烧水。就这些。',
+    need: (s) => totalLevels(s) >= 6,
+    hint: '设施合计 6 级',
+  },
+  {
     id: 'shelter', name: '地下避难所', icon: '🏠', desc: '搬进了地下层，供暖和储水开始成体系。',
-    need: (s) => totalLevels(s) >= 8 && level(s, 'shelter') >= 2,
-    hint: '设施合计 8 级、住所 2 级',
+    need: (s) => totalLevels(s) >= 16 && level(s, 'shelter') >= 2,
+    hint: '设施合计 16 级、住所 2 级',
   },
   {
     id: 'fortress', name: '钢铁堡垒', icon: '🏰', desc: '有电、有工坊、有防线，掠夺者开始绕路。',
-    need: (s) => totalLevels(s) >= 24 && level(s, 'defense') >= 3 && level(s, 'power') >= 2,
-    hint: '设施合计 24 级、防御 3 级、能源 2 级',
+    need: (s) => totalLevels(s) >= 34 && level(s, 'defense') >= 3 && level(s, 'power') >= 2,
+    hint: '设施合计 34 级、防御 3 级、能源 2 级',
   },
   {
-    id: 'city', name: '大型地下城市', icon: '🌆', desc: '几十个人在里面生活、种植、看病、生孩子。文明还在。',
-    need: (s) => totalLevels(s) >= 45 && level(s, 'shelter') >= 5 && level(s, 'medical') >= 3 && level(s, 'greenhouse') >= 3,
-    hint: '设施合计 45 级、住所 5 级、医疗 3 级、温室 3 级',
+    id: 'city', name: '地下城市', icon: '🌆', desc: '几十个人在里面生活、种植、看病、生孩子。文明还在。',
+    need: (s) => totalLevels(s) >= 60 && level(s, 'shelter') >= 5 && level(s, 'medical') >= 3 && level(s, 'greenhouse') >= 3 && level(s, 'housing') >= 3,
+    hint: '设施合计 60 级、住所 5 级、医疗 3 级、温室 3 级、居民区 3 级',
   },
 ];
 

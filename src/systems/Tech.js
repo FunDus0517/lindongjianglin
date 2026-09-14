@@ -18,7 +18,7 @@ export const maxed = (state, id) => level(state, id) >= MAX_TECH_LEVEL;
 
 /** 汇总所有科技线在当前等级下的加成。 */
 export function bonus(state) {
-  const out = { warmth: 0, fuelSave: 0, loot: 0, defense: 0, raidRisk: 0 };
+  const out = { warmth: 0, fuelSave: 0, loot: 0, defense: 0, raidRisk: 0, waterLoop: 0, foodSave: 0 };
   for (const line of TECH_LINES) {
     const lv = level(state, line.id);
     if (lv <= 0) continue;
@@ -52,13 +52,15 @@ export function research(state, id) {
   if (ok !== true) return { ok: false, reason: ok };
   const cost = nextCost(state, id);
   const next = level(state, id) + 1;
+  // 研究室缩短研究时间（直接读 base，避免 Base ↔ Tech 循环依赖）
+  const fast = 1 - Math.min(0.5, 0.08 * (state.base?.research ?? 0));
   return {
     ok: true,
-    minutes: 180,
+    minutes: Math.round(180 * fast),
     cores: -(cost.cores ?? 0),
     items: cost.blueprint ? { blueprint: -cost.blueprint } : {},
     tech: { [id]: 1 },
-    notes: [`你花了一整天拆改管线，把${line.name}推进到 ${next} 级。`, line.levels[next - 1]?.desc ?? ''],
+    notes: [`你花了大半天拆改管线，把${line.name}推进到 ${next} 级。`, line.levels[next - 1]?.desc ?? ''],
     toast: { text: `${line.icon} ${line.name} Lv.${next}`, kind: 'mind' },
     flags: { [`tech_${id}_${next}`]: true },
   };

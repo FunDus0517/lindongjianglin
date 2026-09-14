@@ -60,6 +60,19 @@ export const TECH_LINES = [
       { cost: { cores: 12, blueprint: 2 }, desc: '警报系统：防护 +1，夜袭风险 −8%' },
     ],
   },
+  {
+    // V3.0 策划案 §六：生存科技里的"食物保存、水循环"
+    id: 'loop', name: '循环科技', icon: '♻️',
+    desc: '水循环与食物保存：每一份资源都用得更久。',
+    effect: { waterLoop: 1, foodSave: 1 },
+    levels: [
+      { cost: { cores: 2 }, desc: '雪水过滤：烧雪取水 +1 份' },
+      { cost: { cores: 3, blueprint: 1 }, desc: '冷凝回收：烧雪取水 +1 份' },
+      { cost: { cores: 5, blueprint: 1 }, desc: '地窖储存：温室产出每 2 级 +1 份' },
+      { cost: { cores: 8, blueprint: 2 }, desc: '余热烘干：温室产出每 2 级 +1 份' },
+      { cost: { cores: 12, blueprint: 2 }, desc: '闭环温室：温室产出每 2 级 +1 份' },
+    ],
+  },
 ];
 
 export const techLine = (id) => TECH_LINES.find((t) => t.id === id) ?? null;

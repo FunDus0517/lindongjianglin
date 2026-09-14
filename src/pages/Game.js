@@ -109,7 +109,10 @@ export function Game(ctx) {
           ass.danger.map((l) => h('div', { class: ass.dangerLevel === 'warn' ? 'small' : 'small muted' }, `· ${l}`))),
         h('div', null,
           h('div', { class: 'xs muted' }, '生存建议'),
-          ass.advice.map((l, i) => h('div', { class: 'small strong' }, `${i + 1}. ${l}`)))),
+          ass.advice.map((l, i) => h('div', { class: 'small strong' }, `${i + 1}. ${l}`))),
+        h('div', null,
+          h('div', { class: 'xs muted' }, '基地管理'),
+          ass.manage.map((l) => h('div', { class: 'small muted' }, `· ${l}`)))),
     ], { cls: 'mind' }),
 
     // 第一信息区

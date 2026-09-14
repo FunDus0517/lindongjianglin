@@ -77,35 +77,67 @@ test('世界阶段：三个阶段无限延续，温度持续下降、资源减�
 
 /* ---------------- 2. 长期成长：基地形态 + 科技 ---------------- */
 
-test('基地形态：木屋 → 地下避难所 → 钢铁堡垒 → 大型地下城市，按设施等级推进', () => {
+test('基地形态：临时营地 → 木屋基地 → 地下避难所 → 钢铁堡垒 → 地下城市（V3.0 五段）', () => {
   const s = fresh();
-  assert.equal(Base.form(s).id, 'cabin', '开局是木屋');
+  assert.equal(Base.form(s).id, 'camp', '开局是临时营地');
+  assert.equal(Base.FORMS.length, 5, 'V3.0 策划案写的是五段成长路线');
 
   s.base.shelter = 2;
   s.base.storage = 2;
-  s.base.heating = 2;
-  s.base.medical = 2;   // 合计 8 级
+  s.base.heating = 2;      // 合计 6 级 → 木屋基地
+  assert.equal(Base.form(s).id, 'cabin');
+
+  s.base.medical = 2;
+  s.base.defense = 2;
+  s.base.workshop = 3;
+  s.base.power = 2;
+  s.base.greenhouse = 2;
+  s.base.housing = 1;      // 合计 16 级、住所 2 级 → 地下避难所
+  assert.ok(Base.totalLevels(s) >= 16, `实际 ${Base.totalLevels(s)} 级`);
   assert.equal(Base.form(s).id, 'shelter');
 
   s.base.defense = 3;
-  s.base.power = 2;
-  s.base.workshop = 5;
-  s.base.shelter = 5;
-  s.base.storage = 5;
-  s.base.heating = 5;
-  s.base.medical = 5;
-  assert.equal(Base.form(s).id, 'fortress', `合计 ${Base.totalLevels(s)} 级`);
+  for (const f of ['shelter', 'storage', 'heating', 'power', 'greenhouse', 'medical', 'workshop', 'housing']) s.base[f] = 5;
+  assert.ok(Base.totalLevels(s) >= 34, `实际 ${Base.totalLevels(s)} 级`);
+  assert.equal(Base.form(s).id, 'fortress');
 
-  for (const f of ['shelter', 'storage', 'heating', 'power', 'greenhouse', 'medical', 'defense', 'workshop']) s.base[f] = 8;
-  assert.ok(Base.totalLevels(s) >= 45, `最高形态要求设施合计 ≥ 45，实际 ${Base.totalLevels(s)}`);
+  for (const f of ['shelter', 'storage', 'heating', 'power', 'greenhouse', 'medical', 'defense', 'workshop', 'research', 'housing']) s.base[f] = 8;
+  assert.ok(Base.totalLevels(s) >= 60, `实际 ${Base.totalLevels(s)} 级`);
   assert.equal(Base.form(s).id, 'city', '满足全部条件后是最高形态');
   assert.equal(Base.nextForm(s), null, '最高形态没有下一个');
   assert.match(Base.brief(s), /设施合计/, '晨报必须能报出基地状态');
+  assert.ok(Base.housingCap(s) > 2, '居民区必须能扩大幸存者容量');
 });
 
-test('科技：四条线可研究、成本真实扣除、加成真的接进系统', () => {
+test('设施：V3.0 策划案点名的研究室与居民区真的接进了系统', () => {
   const s = fresh();
-  assert.equal(TECH_LINES.length, 4);
+  const ids = Base.FACILITIES.map((f) => f.id);
+  for (const need of ['heating', 'storage', 'medical', 'research', 'defense', 'housing']) {
+    assert.ok(ids.includes(need), `建设内容里必须包含 ${need}`);
+  }
+
+  // 居民区：幸存者容量
+  s.base.housing = 0;
+  const cap0 = Base.housingCap(s);
+  s.base.housing = 3;
+  assert.ok(Base.housingCap(s) > cap0, '居民区必须提高可容纳人数');
+
+  // 研究室：缩短研究时间（两边都给足晶核，否则研究根本发起不了）
+  const slowState = fresh();
+  slowState.cores = 40;
+  const long = Tech.research(slowState, 'heat');
+  const fastState = fresh();
+  fastState.cores = 40;
+  fastState.base.research = 5;
+  const short = Tech.research(fastState, 'heat');
+  assert.ok(long.ok && short.ok, '两边都应能发起研究');
+  assert.ok(short.minutes < long.minutes, '研究室必须缩短研究时间');
+  assert.ok(short.minutes >= 60, '缩短要有下限，不能变成零耗时');
+});
+
+test('科技：五条线可研究、成本真实扣除、加成真的接进系统', () => {
+  const s = fresh();
+  assert.equal(TECH_LINES.length, 5, '供暖/能源/探索/防御 + 循环科技');
   assert.equal(Tech.totalLevels(s), 0);
 
   // 没资源时不能研究，且给出原因
