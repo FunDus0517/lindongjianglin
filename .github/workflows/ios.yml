@@ -73,11 +73,29 @@ jobs:
           path: ios/Winterfall.ipa
           if-no-files-found: error
 
-      - name: 发布到 Releases（公网永久链接，手机直接下）
+      # 把 IPA 推到一个独立分支：本机脚本用 git 就能取回来，再发布到下载站
+      # （不走 Releases：私有仓库的 Release 链接用户点不开）
+      - name: 把 IPA 推到 ipa 分支（供下载站发布脚本取回）
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          rm -rf /tmp/ipaout && mkdir -p /tmp/ipaout
+          cd /tmp/ipaout
+          git init -q
+          git checkout -q -b ipa
+          cp "$GITHUB_WORKSPACE/ios/Winterfall.ipa" Winterfall.ipa
+          echo "$GITHUB_SHA" > BUILD.txt
+          git add -A
+          git -c user.name=github-actions -c user.email=actions@github.com commit -q -m "ipa $GITHUB_SHA"
+          git push -q --force "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" ipa
+          echo "已推送到 ipa 分支"
+          ls -lh Winterfall.ipa
+
+      - name: 发布到 Releases（备用；私有仓库需登录才能下）
         env:
           GH_TOKEN: ${{ github.token }}
         working-directory: ios
         run: |
           gh release delete latest-ipa --yes --cleanup-tag || true
-          gh release create latest-ipa Winterfall.ipa --title "未签名 IPA（最新构建）" --notes "未签名 IPA，下载后丢进全能签签名安装。App 内容从服务器云端加载，改游戏内容不需要重新出包。"
-          echo "下载地址：https://github.com/${{ github.repository }}/releases/download/latest-ipa/Winterfall.ipa"
+          gh release create latest-ipa Winterfall.ipa --title "未签名 IPA（最新构建）" --notes "未签名 IPA。App 内容从服务器云端加载，改游戏内容不需要重新出包。" || true
