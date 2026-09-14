@@ -9,6 +9,7 @@ import { chance } from '../core/util.js';
 import { TOTAL_DAYS, chapterOf, phaseOf } from '../data/chapters.js';
 import * as Achievement from './Achievement.js';
 import * as Base from './Base.js';
+import * as Crew from './Crew.js';
 import * as Daily from './Daily.js';
 import * as Death from './Death.js';
 import * as Ending from './Ending.js';
@@ -93,6 +94,15 @@ export function rollDay(state) {
   if (drift.changes?.members) Faction.syncAid(state);
   notes.push(...NPC.growCrew(state));
 
+  // 排班分工（V3.0 §十三）：幸存者按玩家指派干活，产出走统一结算入口
+  const crew = Crew.dailySettlement(state);
+  if (Object.keys(crew.items).length > 0) {
+    const applied2 = Inventory.applyItems(state, crew.items);
+    if (!applied2.ok) notes.push('排班产出因为仓库满了没能全收下。');
+  }
+  notes.push(...crew.notes);
+  state.flags.guard_count = crew.guardCount;
+
   // 每日任务：先结算昨天的连击，再抽今天的
   notes.push(...Daily.refresh(state, prevDay));
   Quest.refresh(state);
@@ -141,7 +151,9 @@ export function rollNight(state) {
   if (!state || state.ending || state.active) return null;
   const defense = (state.base?.defense ?? 0) + Tech.bonus(state).defense;
   const risk = Tech.bonus(state).raidRisk;
-  const every = Math.max(2, Math.round((defense >= 4 ? 6 : defense >= 2 ? 4 : 3) * (1 + risk)));
+  // 守夜的人越多，出事间隔越长（排班分工的直接收益）
+  const guardsOnWatch = Crew.guards(state);
+  const every = Math.max(2, Math.round((defense >= 4 ? 6 : defense >= 2 ? 4 : 3) * (1 + risk)) + guardsOnWatch);
   if (state.day % every !== 0) return null;
   return Event.rollNight(state, state.day);
 }

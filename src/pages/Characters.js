@@ -5,6 +5,7 @@
  */
 import { h } from '../core/dom.js';
 import { btn, card, empty, progress, sectionTitle, sheet, tag } from '../ui/components.js';
+import * as Crew from '../systems/Crew.js';
 import * as Inventory from '../systems/Inventory.js';
 import * as NPC from '../systems/NPC.js';
 
@@ -105,6 +106,25 @@ export function CharactersPage(ctx) {
               inAid ? tag('互助成员', 'mind') : null,
               h('span', { class: 'xs muted' }, c.title))),
           h('span', { class: 'xs muted' }, '›'));
+      })),
+
+    // 排班分工（V3.0 §十三）：玩家指派谁去搜刮、谁守夜、谁照看伤病
+    sectionTitle('排班分工', h('span', { class: 'xs muted' }, `守夜 ${Crew.guards(state)} 人`)),
+    Crew.view(state).length === 0
+      ? empty('还没有人加入。先接触人物、建立互助体系。')
+      : h('div', { class: 'col' }, Crew.view(state).map((c) => {
+        const def = NPC.character(c.id);
+        return h('div', { class: 'line' },
+          h('span', { class: 'ic' }, def.portrait),
+          h('div', { class: 'grow' },
+            h('div', { class: 'row between' },
+              h('span', { class: 'strong small' }, def.name),
+              h('span', { class: 'xs muted' }, `${Crew.job(c.jobId).icon} ${Crew.job(c.jobId).name}｜效率 ×${c.eff}${c.injured > 0 ? `｜养伤 ${c.injured} 天` : ''}`)),
+            h('div', { class: 'chips', style: { marginTop: '6px' } }, Crew.JOBS.map((j) => h('button', {
+              class: 'chip',
+              'aria-pressed': c.jobId === j.id ? 'true' : 'false',
+              onClick: (e) => { e.stopPropagation(); Crew.assign(state, c.id, j.id); ctx.refresh(); },
+            }, `${j.icon}${j.name}`)))));
       })),
 
     card([

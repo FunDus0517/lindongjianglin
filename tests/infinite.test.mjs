@@ -16,6 +16,7 @@ import { INJURY_DAYS, DEATH_AFTER_INJURED_DAYS, roleAt, ladderFor } from '../src
 
 import * as Save from '../src/systems/Save.js';
 import * as Base from '../src/systems/Base.js';
+import * as Crew from '../src/systems/Crew.js';
 import * as Tech from '../src/systems/Tech.js';
 import * as NPC from '../src/systems/NPC.js';
 import * as Event from '../src/systems/Event.js';
@@ -291,7 +292,54 @@ test('震动反馈：没有原生桥时静默降级，有桥时按语义发消�
   }
 });
 
-/* ---------------- 7. 剧情：不再有固定排期 ---------------- */
+/* ---------------- 8. 排班分工 ---------------- */
+
+test('排班分工：指派工种有真实产出，守夜能拉长灾害间隔，休息能恢复健康', () => {
+  const s = fresh();
+  s.npcs.wangdawei.met = true;
+  s.npcs.wangdawei.role = '基地管理员';   // 阶梯第二级 → 效率 > 1
+  s.aid = { members: 1, morale: 50, joined: ['wangdawei'] };
+
+  // 默认工种 + 非法工种
+  assert.equal(Crew.assignmentOf(s, 'wangdawei'), Crew.DEFAULT_JOB, '没指派时用默认工种');
+  assert.equal(Crew.assign(s, 'wangdawei', '不存在的工种').ok, false);
+
+  // 搜刮：真的产出物品（走统一结算入口）
+  assert.equal(Crew.assign(s, 'wangdawei', 'scavenge').ok, true);
+  const out = Crew.dailySettlement(s);
+  assert.ok(Object.keys(out.items).length > 0, '搜刮必须产出物品');
+  assert.ok(out.notes.some((n) => /排班产出/.test(n)), '必须写进日志');
+  assert.ok(s.npcs.wangdawei.health < 100, '体力活要掉健康');
+
+  // 休息：恢复健康与压力
+  Crew.assign(s, 'wangdawei', 'rest');
+  const before = s.npcs.wangdawei.health;
+  Crew.dailySettlement(s);
+  assert.ok(s.npcs.wangdawei.health > before, '休息必须恢复健康');
+
+  // 守夜：影响凌晨灾害的间隔（人数越多，间隔越长）
+  const plain = fresh();
+  plain.base.defense = 0;
+  const watched = fresh();
+  watched.base.defense = 0;
+  watched.npcs.wangdawei.met = true;
+  watched.npcs.wangdawei.role = '基地管理员';
+  Crew.assign(watched, 'wangdawei', 'guard');
+  assert.equal(Crew.guards(watched), 1);
+  const hits = [];
+  for (const day of [3, 4, 5, 6, 7, 8, 9, 10, 11, 12]) {
+    plain.day = day; watched.day = day;
+    plain.active = null; watched.active = null;
+    hits.push([GameTime.rollNight(plain) ? 1 : 0, GameTime.rollNight(watched) ? 1 : 0]);
+  }
+  const plainHits = hits.reduce((a, h) => a + h[0], 0);
+  const watchedHits = hits.reduce((a, h) => a + h[1], 0);
+  assert.ok(watchedHits <= plainHits, `守夜不该让灾害变多（${plainHits} → ${watchedHits}）`);
+
+  // 存档往返
+  const round = Save.restore(Save.serialize(watched));
+  assert.equal(round.state.crew.wangdawei, 'guard', '排班必须进存档');
+});
 
 test('剧情：第 1 天之后不再按天排队，但剧情仍会按解锁顺序在后续出现', () => {
   const s = fresh();
