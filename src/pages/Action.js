@@ -4,7 +4,8 @@
  * @module pages/Action
  */
 import { h } from '../core/dom.js';
-import { btn, card, sectionTitle, sheet, tag } from '../ui/components.js';
+import { btn, card, empty, sectionTitle, sheet, tag } from '../ui/components.js';
+import * as WorldMap from '../systems/Map.js';
 import { statGrid } from '../ui/shell.js';
 import { fmtDuration } from '../core/util.js';
 import { ACTIONS } from '../data/locations.js';
@@ -110,6 +111,23 @@ export function ActionPage(ctx) {
       h('div', { class: 'xs muted', style: { marginTop: '6px' } }, w.weather.desc),
       h('div', { style: { marginTop: '10px' } }, statGrid(state, ['hp', 'warmth', 'energy', 'hunger'])),
     ], { cls: 'mind' }),
+
+    sectionTitle('地图', h('span', { class: 'xs muted' }, `${WorldMap.brief(state)}`)),
+    h('div', { class: 'col' }, WorldMap.view(state).map((r) => card([
+      h('div', { class: 'row between' },
+        h('span', { class: 'strong' }, `${r.icon} ${r.name}`),
+        tag(`危险 ${r.danger}`, r.danger >= 4 ? 'bad' : r.danger >= 3 ? 'warn' : 'good')),
+      h('div', { class: 'xs muted', style: { marginTop: '4px' } }, r.desc),
+      h('div', { class: 'col', style: { gap: '6px', marginTop: '10px' } }, r.places.map((p) => h('div', { class: 'row between' },
+        h('div', { class: 'row', style: { gap: '8px' } },
+          h('span', { class: 'ic' }, p.icon),
+          h('span', { class: 'small' }, p.name),
+          p.here ? tag('你在这里', 'mind') : p.locked ? tag('未开放', '') : tag(`${p.minutes} 分钟`, '')),
+        p.here || p.locked
+          ? h('span', { class: 'xs muted' }, p.locked ? (p.reason ?? '') : '')
+          : btn('前往', { kind: 'ghost', sm: true, onClick: () => ctx.apply(WorldMap.travel(state, p.id)) })))),
+      r.places.length === 0 ? empty('这一片还没有可去的地方。') : null,
+    ], { cls: 'flat' }))),
 
     sectionTitle('地点卡', h('span', { class: 'xs muted' }, `${list.length} 个可进入 · 点开看详情`)),
     h('div', { class: 'col' }, list.map((loc) => locationRow(ctx, state, loc))),

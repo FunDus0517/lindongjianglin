@@ -17,6 +17,7 @@ import { INJURY_DAYS, DEATH_AFTER_INJURED_DAYS, roleAt, ladderFor } from '../src
 import * as Save from '../src/systems/Save.js';
 import * as Base from '../src/systems/Base.js';
 import * as Crew from '../src/systems/Crew.js';
+import * as WorldMap from '../src/systems/Map.js';
 import * as Tech from '../src/systems/Tech.js';
 import * as NPC from '../src/systems/NPC.js';
 import * as Event from '../src/systems/Event.js';
@@ -292,7 +293,38 @@ test('震动反馈：没有原生桥时静默降级，有桥时按语义发消�
   }
 });
 
-/* ---------------- 8. 排班分工 ---------------- */
+/* ---------------- 9. 大型地图：区域与移动 ---------------- */
+
+test('地图：地点按区域分组、跨区移动花时间、未开放的地点不出现、移动真的改位置', () => {
+  const s = fresh();
+  s.day = 20;
+  assert.ok(WorldMap.regions().length >= 5, '至少要有 5 个区域');
+
+  // 跨区越远，耗时越长
+  const near = WorldMap.travelMinutes(s, 'supermarket');
+  const far = WorldMap.travelMinutes(s, 'hospital');
+  assert.ok(far > near, `远的地方必须更花时间（${near} → ${far}）`);
+  assert.ok(far <= 400, '单程不能超过大半天，否则一天做不了别的事');
+
+  // 未解锁的地点不出现在地图里
+  const early = fresh();
+  early.day = 3;
+  const ids = WorldMap.view(early).flatMap((r) => r.places.map((p) => p.id));
+  assert.equal(ids.includes('deep_mine'), false, '未开放的地点不该出现在地图上');
+  assert.equal(ids.includes('hospital'), false, '第 3 天医院还没到');
+  assert.ok(ids.includes('apartment'), '自家的地点必须一直在');
+
+  // 移动：真的改位置、花时间、掉体温
+  const out = WorldMap.travel(s, 'hospital');
+  assert.equal(out.ok, true);
+  const before = s.time;
+  applyOutcome(s, out, { autosave: false });
+  assert.equal(s.location, 'hospital', '移动必须改当前位置');
+  assert.ok(s.time > before, '移动必须花时间');
+  assert.equal(WorldMap.currentPlace(s), 'hospital');
+  assert.equal(WorldMap.travel(s, 'hospital').ok, false, '已经在的地方不用再走');
+  assert.equal(typeof WorldMap.travel(s, 'deep_mine').reason, 'string', '未开放必须给出原因');
+});
 
 test('排班分工：指派工种有真实产出，守夜能拉长灾害间隔，休息能恢复健康', () => {
   const s = fresh();
